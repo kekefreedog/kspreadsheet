@@ -23,9 +23,9 @@ if (! formula && typeof(require) === 'function') {
     var Version = function() {
         // Information
         var info = {
-            title: 'Jspreadsheet',
-            version: '4.14.0',
-            type: 'CE',
+            title: 'Kspreadsheet',
+            version: '1.1.0',
+            type: 'Jspreadsheet CE',
             host: 'https://bossanova.uk/jspreadsheet',
             license: 'MIT',
             print: function() {
@@ -326,6 +326,8 @@ if (! formula && typeof(require) === 'function') {
         // Global elements
         obj.el = el;
         obj.corner = null;
+        obj.highlightBorder = null;
+        obj.highlightCopy = null;
         obj.contextMenu = null;
         obj.textarea = null;
         obj.ads = null;
@@ -677,6 +679,14 @@ if (! formula && typeof(require) === 'function') {
             obj.corner.setAttribute('unselectable', 'on');
             obj.corner.setAttribute('onselectstart', 'return false');
 
+            // Spreadsheet highlight border
+            obj.highlightBorder = document.createElement('div');
+            obj.highlightBorder.classList.add("jexcel_border", "jexcel_border_main");
+
+            // Spreadsheet highlight copy
+            obj.highlightCopy = document.createElement('div');
+            obj.highlightCopy.classList.add("jexcel_border", "jexcel_border_copying");
+
             if (obj.options.selectionCopy == false) {
                 obj.corner.style.display = 'none';
             }
@@ -742,6 +752,8 @@ if (! formula && typeof(require) === 'function') {
             // Elements
             obj.content.appendChild(obj.table);
             obj.content.appendChild(obj.corner);
+            obj.content.appendChild(obj.highlightBorder);
+            obj.content.appendChild(obj.highlightCopy);
             obj.content.appendChild(obj.textarea);
 
             el.appendChild(obj.toolbar);
@@ -3128,8 +3140,10 @@ if (! formula && typeof(require) === 'function') {
 
             obj.dispatch('onselection', el, borderLeft, borderTop, borderRight, borderBottom, origin);
 
-            // Find corner cell
+            // Set corner cell and highlight border
+            obj.updateHighlightBorder();
             obj.updateCornerPosition();
+            obj.updateHighlightCopy();
         }
 
         /**
@@ -3146,6 +3160,9 @@ if (! formula && typeof(require) === 'function') {
                 obj.selection[i].classList.remove('selection-top');
                 obj.selection[i].classList.remove('selection-bottom');
             }
+
+            obj.highlightCopy.style.top = '-2000px';
+            obj.highlightCopy.style.left = '-2000px';
 
             obj.selection = [];
         }
@@ -3206,6 +3223,74 @@ if (! formula && typeof(require) === 'function') {
                     }
                 }
             }
+        }
+
+        /**
+         * Update highlight border
+         *
+         * @return void
+         */
+        obj.updateHighlightBorder = function() {
+
+            if (! obj.highlighted.length) {
+                obj.highlightBorder.style.top = '-2000px';
+                obj.highlightBorder.style.left = '-2000px';
+            } else {
+
+                // Get first cell
+                var first = obj.highlighted.at(0);
+                
+                // Get last cell
+                var last = obj.highlighted.at(-1);
+
+                const top = first.offsetTop;
+                const left = first.offsetLeft;
+                const width = (last.offsetLeft + last.offsetWidth) - first.offsetLeft;
+                const height = (last.offsetTop + last.offsetHeight) - first.offsetTop;
+
+                obj.highlightBorder.style.top = `${top}px`;
+                obj.highlightBorder.style.left = `${left}px`;
+                obj.highlightBorder.style.width = `${width}px`;
+                obj.highlightBorder.style.height = `${height}px`;
+
+            }
+
+        }
+
+        /**
+         * Update highlight copy
+         *
+         * @return void
+         */
+        obj.updateHighlightCopy = function() {
+
+            var copySelectionEls = obj.tbody.querySelectorAll("td.copying");
+
+            if (! copySelectionEls.length) {
+                obj.highlightCopy.style.top = '-2000px';
+                obj.highlightCopy.style.left = '-2000px';
+            } else {
+
+                var copySelectionArray = Array.from(copySelectionEls);
+
+                // Get first cell
+                var first = copySelectionArray.at(0);
+                
+                // Get last cell
+                var last = copySelectionArray.at(-1);
+
+                const top = first.offsetTop;
+                const left = first.offsetLeft;
+                const width = (last.offsetLeft + last.offsetWidth) - first.offsetLeft;
+                const height = (last.offsetTop + last.offsetHeight) - first.offsetTop;
+
+                obj.highlightCopy.style.top = `${top}px`;
+                obj.highlightCopy.style.left = `${left}px`;
+                obj.highlightCopy.style.width = `${width}px`;
+                obj.highlightCopy.style.height = `${height}px`;
+
+            }
+
         }
 
         /**
@@ -3391,8 +3476,11 @@ if (! formula && typeof(require) === 'function') {
                 // On resize column
                 obj.dispatch('onresizecolumn', el, column, width, oldWidth);
 
-                // Update corner position
+                // Set corner cell and highlight border
+                obj.updateHighlightBorder();
                 obj.updateCornerPosition();
+                obj.updateHighlightCopy();
+
             }
         }
 
@@ -3443,8 +3531,11 @@ if (! formula && typeof(require) === 'function') {
                 // On resize column
                 obj.dispatch('onresizerow', el, row, height, oldHeight);
 
-                // Update corner position
+                // Set corner cell and highlight border
+                obj.updateHighlightBorder();
                 obj.updateCornerPosition();
+                obj.updateHighlightCopy();
+                
             }
         }
 
@@ -5026,7 +5117,10 @@ if (! formula && typeof(require) === 'function') {
 
             // Update corner position
             setTimeout(function() {
+                // Set corner cell and highlight border
+                obj.updateHighlightBorder();
                 obj.updateCornerPosition();
+                obj.updateHighlightCopy();
             },0);
         }
 
@@ -6074,8 +6168,11 @@ if (! formula && typeof(require) === 'function') {
                 obj.updatePagination();
             }
 
+            // Set corner cell and highlight border
+            obj.updateHighlightBorder();
             obj.updateCornerPosition();
-
+            obj.updateHighlightCopy();
+                
             return total;
         }
 
@@ -6143,8 +6240,10 @@ if (! formula && typeof(require) === 'function') {
                 obj.updatePagination();
             }
 
-            // Update corner position
+            // Set corner cell and highlight border
+            obj.updateHighlightBorder();
             obj.updateCornerPosition();
+            obj.updateHighlightCopy();
 
             // Events
             obj.dispatch('onchangepage', el, pageNumber, oldPage);
@@ -6478,6 +6577,9 @@ if (! formula && typeof(require) === 'function') {
                     }
                 }
 
+                // New highlight copy
+                obj.updateHighlightCopy();
+
                 // Paste event
                 obj.dispatch('oncopy', el, obj.options.copyCompatibility == true ? rowLabel : row, obj.hashString);
             }
@@ -6653,6 +6755,8 @@ if (! formula && typeof(require) === 'function') {
                 copying[i].classList.remove('copying-top');
                 copying[i].classList.remove('copying-bottom');
             }
+            obj.highlightCopy.style.top = '-2000px';
+            obj.highlightCopy.style.left = '-2000px';
         }
 
         /**
@@ -7334,14 +7438,24 @@ if (! formula && typeof(require) === 'function') {
                                 if (obj.content.scrollTop + obj.content.clientHeight > obj.content.scrollHeight - 10) {
                                     obj.content.scrollTop = obj.content.scrollTop - obj.content.clientHeight;
                                 }
+                                
+                                // Set corner cell and highlight border
+                                obj.updateHighlightBorder();
                                 obj.updateCornerPosition();
+                                obj.updateHighlightCopy();
+                
                             }
                         } else if (obj.content.scrollTop <= obj.content.clientHeight) {
                             if (obj.loadUp()) {
                                 if (obj.content.scrollTop < 10) {
                                     obj.content.scrollTop = obj.content.scrollTop + obj.content.clientHeight;
                                 }
+
+                                // Set corner cell and highlight border
+                                obj.updateHighlightBorder();
                                 obj.updateCornerPosition();
+                                obj.updateHighlightCopy();
+                
                             }
                         }
 
@@ -7453,8 +7567,11 @@ if (! formula && typeof(require) === 'function') {
 
             }
 
-            // Place the corner in the correct place
+            // Set corner cell and highlight border
+            obj.updateHighlightBorder();
             obj.updateCornerPosition();
+            obj.updateHighlightCopy();
+                
         }
 
         /**
@@ -8224,7 +8341,11 @@ if (! formula && typeof(require) === 'function') {
                             var tempWidth = jexcel.current.resizing.width + width;
                             jexcel.current.colgroup[jexcel.current.resizing.column].setAttribute('width', tempWidth);
 
+                            // Set corner cell and highlight border
+                            jexcel.current.updateHighlightBorder();
                             jexcel.current.updateCornerPosition();
+                            jexcel.current.updateHighlightCopy();
+
                         }
                     } else {
                         var height = e.pageY - jexcel.current.resizing.mousePosition;
@@ -8233,7 +8354,11 @@ if (! formula && typeof(require) === 'function') {
                             var tempHeight = jexcel.current.resizing.height + height;
                             jexcel.current.rows[jexcel.current.resizing.row].setAttribute('height', tempHeight);
 
+                            // Set corner cell and highlight border
+                            jexcel.current.updateHighlightBorder();
                             jexcel.current.updateCornerPosition();
+                            jexcel.current.updateHighlightCopy();
+                            
                         }
                     }
                 } else if (jexcel.current.dragging) {

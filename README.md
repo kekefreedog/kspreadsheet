@@ -10,6 +10,10 @@
 
 ## Kspreadsheet
 
+### Kspreadsheet 1.1.0
+
+- New copy and highlight selection
+
 ### Kspreadsheet 1.0.0
 
 - Apply freeze header on filter
