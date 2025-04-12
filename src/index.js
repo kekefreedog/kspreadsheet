@@ -6338,7 +6338,7 @@ if (! formula && typeof(require) === 'function') {
          *
          * @return null
          */
-        obj.download = function(includeHeaders) {
+        obj.download = function(includeHeaders, type="csv") {
             if (obj.options.allowExport == false) {
                 console.error('Export not allowed');
             } else {
