@@ -1,5 +1,6 @@
 {
-    "name": "jspreadsheet-ce",
+    "name": "kspreadsheet",
+    "version": "2.0.0",
     "title": "The Javascript Spreadsheet",
     "description": "Jspreadsheet is a lightweight, vanilla javascript plugin to create amazing web-based interactive data grids with spreadsheet like controls compatible with Excel, Google Spreadsheets and any other spreadsheet software.",
     "repository": {
@@ -46,10 +47,9 @@
         "xls",
         "datasheet"
     ],
-    "type": "module",
     "dependencies": {
         "@jspreadsheet/formula": "^2.0.2",
-        "jsuites": "^5.8.2"
+        "jsuites": "^5.8.5"
     },
     "devDependencies": {
         "@babel/cli": "^7.7.4",
@@ -79,7 +79,6 @@
     },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
-    "version": "5.0.0-beta.3",
     "bugs": "https://github.com/jspreadsheet/ce/issues",
     "homepage": "https://github.com/jspreadsheet/ce",
     "download": "https://github.com/jspreadsheet/ce/archive/master.zip",
@@ -90,10 +89,7 @@
         "prettier": "prettier --check .",
         "prettier:fix": "prettier --write .",
         "start": "webpack serve --history-api-fallback",
-        "build": "cross-env NODE_ENV=production webpack --config webpack.config.cjs",
-        "test": "mocha --recursive --require=mocha.config.cjs",
-        "test:watch": "mocha --recursive --watch --parallel --reporter min --require=mocha.config.cjs",
-        "test:browser": "mocha --recursive --reporter mochawesome --config mocha.config.cjs",
-        "test:coverage": "c8 mocha --recursive --config mocha.config.cjs"
+        "build": "cross-env NODE_ENV=production webpack --config webpack.config.js",
+        "test": "npm run build && mocha --recursive --require=mocha.config.js"
     }
 }

@@ -144,7 +144,78 @@ export const updateSelection = function(el1, el2, origin) {
     updateSelectionFromCoords.call(obj, x1, y1, x2, y2, origin);
 }
 
+export const updateHighlightBorder = function() {
+
+    const obj = this;
+
+    if(Array.isArray(obj.highlighted)){
+        if (!obj.highlighted.length) {
+            obj.highlightBorder.style.top = '-2000px';
+            obj.highlightBorder.style.left = '-2000px';
+        } else {
+
+            // Get first cell
+            var first = obj.highlighted.at(0).element;
+            
+            // Get last cell
+            var last = obj.highlighted.at(-1).element;
+
+            const top = first.offsetTop;
+            const left = first.offsetLeft;
+            const width = (last.offsetLeft + last.offsetWidth) - first.offsetLeft;
+            const height = (last.offsetTop + last.offsetHeight) - first.offsetTop;
+
+            obj.highlightBorder.style.top = `${top}px`;
+            obj.highlightBorder.style.left = `${left}px`;
+            obj.highlightBorder.style.width = `${width}px`;
+            obj.highlightBorder.style.height = `${height}px`;
+
+        }
+    }
+
+}
+
+export const updateHighlightCopy = function() {
+
+    const obj = this;
+
+
+    var copySelectionEls = obj.tbody.querySelectorAll("td.copying");
+
+    if (! copySelectionEls.length) {
+        obj.highlightCopy.style.top = '-2000px';
+        obj.highlightCopy.style.left = '-2000px';
+    } else {
+
+        var copySelectionArray = Array.from(copySelectionEls);
+
+        console.log("--debug--");
+        console.log(copySelectionEls);
+
+        // Get first cell
+        var first = copySelectionArray.at(0);
+        
+        // Get last cell
+        var last = copySelectionArray.at(-1);
+
+        const top = first.offsetTop;
+        const left = first.offsetLeft;
+        const width = (last.offsetLeft + last.offsetWidth) - first.offsetLeft;
+        const height = (last.offsetTop + last.offsetHeight) - first.offsetTop;
+
+        obj.highlightCopy.style.top = `${top}px`;
+        obj.highlightCopy.style.left = `${left}px`;
+        obj.highlightCopy.style.width = `${width}px`;
+        obj.highlightCopy.style.height = `${height}px`;
+
+    }
+
+}
+
 export const removeCopyingSelection = function() {
+
+    const obj = this;
+
     const copying = document.querySelectorAll('.jss_worksheet .copying');
     for (let i = 0; i < copying.length; i++) {
         copying[i].classList.remove('copying');
@@ -152,7 +223,9 @@ export const removeCopyingSelection = function() {
         copying[i].classList.remove('copying-right');
         copying[i].classList.remove('copying-top');
         copying[i].classList.remove('copying-bottom');
-    }
+    }            
+    obj.highlightCopy.style.top = '-2000px';
+    obj.highlightCopy.style.left = '-2000px';
 }
 
 export const updateSelectionFromCoords = function(x1, y1, x2, y2, origin) {
@@ -340,13 +413,18 @@ export const updateSelectionFromCoords = function(x1, y1, x2, y2, origin) {
     if (previousState == 0) {
         dispatch.call(obj, 'onfocus', obj);
 
-        removeCopyingSelection();
+        removeCopyingSelection.call(obj);
     }
 
     dispatch.call(obj, 'onselection', obj, borderLeft, borderTop, borderRight, borderBottom, origin);
 
+    // Set corner cell and highlight border
+    updateHighlightBorder.call(obj);
+
     // Find corner cell
     updateCornerPosition.call(obj);
+
+    updateHighlightCopy.call(obj);
 }
 
 /**
@@ -398,7 +476,10 @@ export const removeCopySelection = function() {
         obj.selection[i].classList.remove('selection-right');
         obj.selection[i].classList.remove('selection-top');
         obj.selection[i].classList.remove('selection-bottom');
-    }
+    }            
+    
+    obj.highlightCopy.style.top = '-2000px';
+    obj.highlightCopy.style.left = '-2000px';
 
     obj.selection = [];
 }
@@ -418,7 +499,7 @@ export const copyData = function(o, d) {
     const obj = this;
 
     // Get data from all selected cells
-    const data = obj.getData(true, true);
+    const data = obj.getData(true, false);
 
     // Selected cells
     const h = obj.selectedContainer;
@@ -575,7 +656,7 @@ export const copyData = function(o, d) {
 export const hash = function(str) {
     let hash = 0, i, chr;
 
-    if (str.length === 0) {
+    if (!str || str.length === 0) {
         return hash;
     } else {
         for (i = 0; i < str.length; i++) {

@@ -2,7 +2,7 @@ import jSuites from "jsuites";
 import formula from "@jspreadsheet/formula";
 
 import dispatch from "./dispatch.js";
-import { refreshSelection, updateCornerPosition } from "./selection.js";
+import { refreshSelection, updateCornerPosition, updateHighlightBorder, updateHighlightCopy } from "./selection.js";
 import { getColumnName } from "./helpers.js";
 import { updateMeta } from "./meta.js";
 import { getFreezeWidth } from "./freeze.js";
@@ -63,7 +63,9 @@ export const updateTable = function() {
 
     // Update corner position
     setTimeout(function() {
+        updateHighlightBorder.call(obj);
         updateCornerPosition.call(obj);
+        updateHighlightCopy.call(obj);
     },0);
 }
 
@@ -387,6 +389,9 @@ export const createCell = function(i, j, value) {
     td.setAttribute('data-x', i);
     td.setAttribute('data-y', j);
 
+    if( obj.headers[i].style.display === 'none' ){
+        td.style.display = 'none';
+    }
     // Security
     if ((''+value).substr(0,1) == '=' && obj.options.secureFormulas == true) {
         const val = secureFormula(value);
@@ -859,6 +864,10 @@ const updateFormulas = function(referencesToUpdate) {
  */
 export const updateTableReferences = function() {
     const obj = this;
+    if( obj.skipUpdateTableReferences ){
+        return;
+    }
+
 
     // Update headers
     for (let i = 0; i < obj.headers.length; i++) {
@@ -1084,7 +1093,9 @@ export const updateResult = function() {
         updatePagination.call(obj);
     }
 
+    updateHighlightBorder.call(obj);
     updateCornerPosition.call(obj);
+    updateHighlightCopy.call(obj);
 
     return total;
 }
