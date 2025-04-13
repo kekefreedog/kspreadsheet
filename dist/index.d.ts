@@ -2296,7 +2296,7 @@ declare namespace jspreadsheet {
     getFooters: () => Record<number, string>[];
 
     /**
-     * Set Footers
+     * Set Footer
      * @param footers - Footers
      */
     setFooter: (footers:string[][]) => void;
