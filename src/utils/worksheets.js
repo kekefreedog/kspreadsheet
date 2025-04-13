@@ -28,6 +28,7 @@ import { isReadOnly, setReadOnly } from './cells.js';
 import { openFilter, resetFilters } from './filter.js';
 import { redo, undo } from './history.js';
 import { getZoom, resetZoom, setZoom, zoomIn, zoomOut } from './zoom.js';
+import { getFooters, setFooter } from './footer.js';
 
 const setWorksheetFunctions = function(worksheet) {
     for (let i = 0; i < worksheetPublicMethodsLength; i++) {
@@ -749,6 +750,8 @@ const worksheetPublicMethods = [
     ['zoomIn', zoomIn],
     ['zoomOut', zoomOut],
     ['resetZoom', resetZoom],
+    ['getFooters', getFooters],
+    ['setFooter', setFooter],
 ];
 
 const worksheetPublicMethodsLength = worksheetPublicMethods.length;

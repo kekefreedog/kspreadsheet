@@ -3,6 +3,12 @@ import { parseValue } from "./internal.js";
 export const setFooter = function(data) {
     const obj = this;
 
+    const footerLength = Array.isArray(obj.options.footers) 
+        ? (Math.max(obj.options.footers.length, data?.length ?? 0))
+        : (data?.length ?? 0)
+    ;
+
+
     if (data) {
         obj.options.footers = data;
     }
@@ -13,11 +19,28 @@ export const setFooter = function(data) {
             obj.table.appendChild(obj.tfoot);
         }
 
-        for (let j = 0; j < obj.options.footers.length; j++) {
+        // for (let j = 0; j < obj.options.footers.length; j++) {
+        for (let j = 0; j < footerLength; j++) {
+
             let tr;
 
             if (obj.tfoot.children[j]) {
-                tr = obj.tfoot.children[j];
+
+                // Check if tr to delete
+                if((data.length - 1) < j){
+
+                    // Delete rfoot
+                    obj.tfoot.children[j].remove();
+
+                    // Continue iteration
+                    continue;
+
+                }else{
+
+                    tr = obj.tfoot.children[j];
+
+                }
+
             } else {
                 tr = document.createElement('tr');
                 const td = document.createElement('td');
@@ -48,4 +71,45 @@ export const setFooter = function(data) {
             }
         }
     }
+}
+
+export const getFooters = function(data) {
+
+    // Set result
+    let result = [];
+
+    // Get footer td
+    let footerEls = this.element.querySelectorAll("tfoot tr");
+
+    // Iterations footers el
+    if(footerEls.length) for(let footerEl of footerEls) if(footerEl){
+
+        // Get all td
+        let tdEls = footerEl.querySelectorAll("td");
+
+        // Set index
+        let i = 0;
+
+        // Row
+        let row = {};
+
+        // Iteration td els
+        if(tdEls.length) for(let tdEl of tdEls) if(tdEl) {
+
+            // Push to row
+            row[i] = tdEl.innerText ? tdEl.innerText : '';
+
+            // Increment i
+            i++;
+
+        }
+
+        // Push row into result
+        result.push(row);
+
+    }
+
+    // Return result
+    return result;
+
 }

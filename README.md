@@ -46,6 +46,7 @@
 
 }
 ```
+- Add method `setHeader` and `getHeaders`
 
 ### Kspreadsheet 2.0.0
 

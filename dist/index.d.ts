@@ -2291,6 +2291,17 @@ declare namespace jspreadsheet {
     setHeaders: (columns: Record<number, string>, offset?: number) => void;
 
     /**
+     * Get Footers
+     */
+    getFooters: () => Record<number, string>[];
+
+    /**
+     * Set Footers
+     * @param footers - Footers
+     */
+    setFooter: (footers:string[][]) => void;
+
+    /**
      * Change row height.
      * @param row - Row index.
      * @param height - New height. An integer greater than zero.
