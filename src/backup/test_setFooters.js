@@ -26,6 +26,19 @@ let footersNew = [
     ],
 ];
 
+let records = [
+    {
+        x: 0,
+        y: 0,
+        value: 'update A1',
+    },
+    {
+        x: 3,
+        y: 3,
+        value: 'Another cell',
+    }
+];
+
 window.instance = jspreadsheet(root, {
     tabs: true,
     toolbar: true,
@@ -80,4 +93,16 @@ resetFooterEl.addEventListener("click", () => {
 
 })
 
-document.body.append(getFooterEl, setFooterEl, resetFooterEl);
+let pushValueEl = document.createElement("button");
+
+pushValueEl.innerText = "Push Value";
+
+pushValueEl.addEventListener("click", () => {
+
+    for(let worksheet of worksheets) 
+
+        worksheet.setValue(records);
+
+})
+
+document.body.append(getFooterEl, setFooterEl, resetFooterEl, pushValueEl);
