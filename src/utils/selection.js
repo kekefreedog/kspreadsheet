@@ -189,9 +189,6 @@ export const updateHighlightCopy = function() {
 
         var copySelectionArray = Array.from(copySelectionEls);
 
-        console.log("--debug--");
-        console.log(copySelectionEls);
-
         // Get first cell
         var first = copySelectionArray.at(0);
         
