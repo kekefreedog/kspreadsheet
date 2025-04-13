@@ -325,6 +325,8 @@ const getDropDownValue = function(column, key) {
 
     const value = [];
 
+    if(!("source" in obj.options.columns[column]) || !obj.options.columns[column].source) obj.options.columns[column].source = [];
+
     if (obj.options.columns && obj.options.columns[column] && obj.options.columns[column].source) {
         // Create array from source
         const combo = [];
