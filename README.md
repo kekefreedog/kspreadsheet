@@ -37,6 +37,7 @@ requirements. It is a complete solution for web data management. Create amazing 
 
 ### Jspreadsheet Pro - Enterprise Solution
 - [Jspreadsheet Pro](https://jspreadsheet.com/)
+- [Real-time React Spreadsheets](https://github.com/jspreadsheet/spreadsheet-react-server)
 
 <br>
 
