@@ -2288,7 +2288,7 @@ declare namespace jspreadsheet {
      * @param columns - Columns
      * @param offset - Index column offset
      */
-    setHeaders: (columns: Record<number, string>[], offset?: number) => void;
+    setHeaders: (columns: Record<number, string>, offset?: number) => void;
 
     /**
      * Change row height.
