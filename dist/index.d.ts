@@ -2284,6 +2284,13 @@ declare namespace jspreadsheet {
     setHeader: (column: number, newValue?: string) => void;
 
     /**
+     * Set multiple columns title.
+     * @param columns - Columns
+     * @param offset - Index column offset
+     */
+    setHeaders: (columns: Record<number, string>[], offset?: number) => void;
+
+    /**
      * Change row height.
      * @param row - Row index.
      * @param height - New height. An integer greater than zero.
