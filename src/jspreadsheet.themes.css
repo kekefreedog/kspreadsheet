@@ -113,30 +113,30 @@
 
 .jss_worksheet .editor .jupload, .jss_worksheet .editor .jss_richtext {
 
-    font-size: var(--jss_editor-font-size, .875rem);
+    font-size: var(--jss_editor_font_size, .875rem);
 
 }
 
 .jss_worksheet .editor .jclose:after {
 
-    font-size: var(--jss_editor-icon-size, 24px);
+    font-size: var(--jss_editor_icon_size, 24px);
 
 }
 
-.jss_page {
+.jss_page, .jss_worksheet > thead > tr > td, .jss_worksheet > tbody > tr > td {
 
-    font-size: var(--jss_font-size, 0.8em);
+    font-size: var(--jss_font_size, 0.8em);
 
 }
 
 .jcontextmenu > div a {
 
-    font-size: var(--jss_contextmenu-font-size, 16px)!important;
+    font-size: var(--jss_contextmenu_font_size, 16px)!important;
 
 }
 
 .jss_about {
 
-    font-size: var(--jss_about-font-size, 24px);
+    font-size: var(--jss_about_font_size, 24px);
 
 }

@@ -10,6 +10,43 @@
 
 ## Kspreadsheet
 
+### Kspreadsheet 2.1.0
+
+- Update css variables :
+```css
+.jss_worksheet {
+
+    --jss_border_color: var(--md-sys-color-outline);
+    --jss_border_color_highlighted: var(--md-sys-color-primary);
+  
+    --jss_header_background: var(--md-sys-color-primary);
+    --jss_header_color: var(--md-sys-color-on-primary);
+    --jss_header_background_highlighted: var(--md-sys-color-primary-container);
+    --jss_header_color_highlighted: var(--md-sys-color-on-primary-container);
+  
+    --jss_content_background: var(--md-sys-color-background);
+    --jss_content_color: var(--md-sys-color-on-background);
+    --jss_content_background_highlighted: var(--md-sys-color-surface-variant);
+    --jss_content_color_highlighted: var(--md-sys-color-on-surface-variant);
+  
+    --jss_selection: var(--md-sys-color-secondary-container);
+    --jss_cursor: var(--md-sys-color-secondary);
+  
+    --jss_menu_background: var(--md-sys-color-surface);
+    --jss_menu_color: var(--md-sys-color-on-surface);
+    --jss_menu_box_shadow: 0 2px 6px rgba(0, 0, 0, 0.15); // fallback shadow
+    --jss_menu_background_highlighted: var(--md-sys-color-surface-variant);
+    --jss_menu_color_highlighted: var(--md-sys-color-on-surface-variant);
+
+    --jss_editor_font_size: .875rem;
+    --jss_editor_icon_size: 24px;
+    --jss_font_size: 0.8em;
+    --jss_contextmenu_font_size: 16px!important;
+    --jss_about_font_size: 24px;
+
+}
+```
+
 ### Kspreadsheet 2.0.0
 
 - Migrate from Jspreadsheet CE v4 to Jspreadsheet CE v5
