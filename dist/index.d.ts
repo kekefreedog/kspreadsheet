@@ -1670,6 +1670,7 @@ declare namespace jspreadsheet {
     download: (
       includeHeaders?: boolean,
       processed?: boolean,
+      type?: "csv"|"xlsx"
     ) => void;
 
     /**
