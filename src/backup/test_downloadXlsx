@@ -1,0 +1,31 @@
+import jspreadsheet from './index.js';
+
+import './jspreadsheet.css';
+import 'jsuites/dist/jsuites.css';
+
+window.jss = jspreadsheet;
+
+window.instance = jspreadsheet(root, {
+    tabs: true,
+    toolbar: true,
+    worksheets: [{
+        minDimensions: [10,20],
+    }],
+})
+
+
+let worksheets = window.instance;
+
+let downloadEl = document.createElement("button");
+
+downloadEl.innerText = "Download XLSX";
+
+downloadEl.addEventListener("click", () => {
+
+    for(let worksheet of worksheets) 
+        
+        console.log(worksheet.download(true, null, "xlsx"));
+
+})
+
+document.body.append(downloadEl);
