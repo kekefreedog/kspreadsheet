@@ -3,7 +3,7 @@ import jSuites from 'jsuites';
 import libraryBase from './libraryBase.js';
 import { setEvents } from './events.js';
 import { fullscreen, getWorksheetActive } from './internal.js';
-import { hideToolbar, showToolbar, updateToolbar } from './toolbar.js';
+import { hideToolbar, renameTab, showToolbar, updateToolbar } from './toolbar.js';
 import { buildWorksheet, createWorksheetObj, getNextDefaultWorksheetName } from './worksheets.js';
 import dispatch from './dispatch.js';
 import { createFromTable } from './helpers.js';
@@ -25,18 +25,37 @@ const createWorksheets = async function(spreadsheet, options, el) {
                 }
             },
             oncreate: function(element, newTabContent) {
-                if (!spreadsheet.creationThroughJss) {
-                    const worksheetName = element.tabs.headers.children[element.tabs.headers.children.length - 2].innerHTML;
 
-                    createWorksheetObj.call(
-                        spreadsheet.worksheets[0],
-                        {
+                let worksheetName = element.tabs.headers.children[element.tabs.headers.children.length - 2].innerHTML;
+
+                if (!spreadsheet.creationThroughJss) {
+
+                    let currentOption;
+
+                    if(typeof options.onbeforecreateworksheet === "function")
+
+                        currentOption = options.onbeforecreateworksheet(options, options.worksheets.length);
+
+                    else
+
+                        currentOption = {
                             minDimensions: [10, 15],
                             worksheetName: worksheetName,
-                        }
+                        };
+
+                    let result = createWorksheetObj.call(
+                        spreadsheet.worksheets[0],
+                        currentOption
                     )
+
+                    if(result.options.worksheetName)
+
+                        worksheetName = result.options.worksheetName;
+
                 } else {
+
                     spreadsheet.creationThroughJss = false;
+                    
                 }
 
                 const newWorksheet = spreadsheet.worksheets[spreadsheet.worksheets.length - 1];
@@ -46,8 +65,8 @@ const createWorksheets = async function(spreadsheet, options, el) {
                 buildWorksheet.call(newWorksheet)
                     .then(function() {
                         updateToolbar(newWorksheet);
-
                         dispatch.call(newWorksheet, 'oncreateworksheet', newWorksheet, options, spreadsheet.worksheets.length - 1);
+                        renameTab(newWorksheet, worksheetName);
                     });
             },
             onchange: function(element, instance, tabIndex) {

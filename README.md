@@ -10,6 +10,10 @@
 
 ## Kspreadsheet
 
+### Kspreadsheet 2.2.0
+
+- Append event : `onbeforecreateworksheet` and fix tab rename
+
 ### Kspreadsheet 2.1.0
 
 - Update css variables :

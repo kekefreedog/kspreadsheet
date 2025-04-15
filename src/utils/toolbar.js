@@ -494,6 +494,19 @@ export const updateToolbar = function(worksheet) {
     }
 }
 
+export const renameTab = function(worksheet, worksheetName) {
+
+    if (worksheet.parent && worksheetName) {
+        
+        let tabToRenameEl = worksheet.parent.el.querySelector(".jtabs-selected");
+
+        if(tabToRenameEl instanceof HTMLElement)
+
+            tabToRenameEl.innerText = worksheetName;
+
+    }
+}
+
 export const showToolbar = function() {
     const spreadsheet = this;
 

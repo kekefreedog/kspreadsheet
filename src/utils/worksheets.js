@@ -607,8 +607,18 @@ export const createWorksheetObj = function(options) {
 export const createWorksheet = function(options) {
     const obj = this;
     const spreadsheet = obj.parent;
+    const optionLegacy = options;
 
     spreadsheet.creationThroughJss = true;
+
+    if(typeof this.parent.config.onbeforecreateworksheet === "function"){
+
+        options = {
+            ...this.parent.config.onbeforecreateworksheet(obj.parent, obj.parent.worksheets.length),
+            ...optionLegacy
+        }
+
+    }
 
     createWorksheetObj.call(obj, options);
 
