@@ -13,14 +13,14 @@ export const download = function(includeHeaders, processed, type = "csv") {
     const rawData = copy.call(obj, false, obj.options.csvDelimiter, true, includeHeaders, true, undefined, processed);
 
     if (type === "xlsx") {
-        // Use provided delimiter or default to tab
+        
         const delimiter = obj.options.csvDelimiter || "\t";
 
-        // Parse rows
         let rows = rawData.split("\r\n").map(row =>
-            row.split(delimiter).map(cell =>
-                cell.replace(/^"|"$/g, "").replace(/""/g, '"') // Unescape quotes
-            )
+            row.split(delimiter).map(cell => {
+                const cleaned = cell.replace(/^"|"$/g, "").replace(/""/g, '"');
+                return cleaned; // Return as string — do not convert to number
+            })
         );
 
         // Normalize all rows to same length

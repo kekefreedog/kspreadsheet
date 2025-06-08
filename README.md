@@ -10,6 +10,10 @@
 
 ## Kspreadsheet
 
+### Kspreadsheet 2.2.1
+
+- Fix "," and "." in number when downloading xlsx
+
 ### Kspreadsheet 2.2.0
 
 - Append event : `onbeforecreateworksheet` and fix tab rename
