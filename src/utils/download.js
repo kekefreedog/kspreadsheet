@@ -19,7 +19,10 @@ export const download = function(includeHeaders, processed, type = "csv") {
         let rows = rawData.split("\r\n").map(row =>
             row.split(delimiter).map(cell => {
                 const cleaned = cell.replace(/^"|"$/g, "").replace(/""/g, '"');
-                return cleaned; // Return as string — do not convert to number
+
+                // Replace dot with comma only for decimal numbers (e.g. 123.45)
+                const isDecimal = /^-?\d+\.\d+$/.test(cleaned);
+                return isDecimal ? cleaned.replace(".", ",") : cleaned;
             })
         );
 
