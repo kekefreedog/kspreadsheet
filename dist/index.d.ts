@@ -70,7 +70,7 @@ declare namespace jspreadsheet {
       x: number,
       y: number,
       instance: WorksheetInstance,
-      options: Column,
+      options: Column
     ) => CellValue | undefined;
 
     /**
@@ -89,7 +89,7 @@ declare namespace jspreadsheet {
       x: number,
       y: number,
       instance: WorksheetInstance,
-      options: Column,
+      options: Column
     ) => HTMLTableCellElement;
 
     /**
@@ -129,7 +129,7 @@ declare namespace jspreadsheet {
       x: number,
       y: number,
       instance: WorksheetInstance,
-      options: Column,
+      options: Column
     ) => CellValue | undefined;
   }
 
@@ -168,7 +168,7 @@ declare namespace jspreadsheet {
       x: number,
       y: number,
       instance: WorksheetInstance,
-      options: Column,
+      options: Column
     ) => void;
 
     /**
@@ -261,7 +261,7 @@ declare namespace jspreadsheet {
       toolbarElement: HTMLDivElement,
       toolbarInstance: Record<string, any>,
       itemElement: HTMLDivElement,
-      worksheetInstance: WorksheetInstance,
+      worksheetInstance: WorksheetInstance
     ) => void;
 
     [property: string]: any;
@@ -282,7 +282,7 @@ declare namespace jspreadsheet {
       toolbarElement: HTMLDivElement,
       toolbarInstance: Record<string, any>,
       itemElement: HTMLDivElement,
-      event: PointerEvent,
+      event: PointerEvent
     ) => void;
   }
 
@@ -307,7 +307,7 @@ declare namespace jspreadsheet {
       value: string,
       value2: string,
       valueIndex: string,
-      event: PointerEvent,
+      event: PointerEvent
     ) => void;
 
     /**
@@ -321,10 +321,7 @@ declare namespace jspreadsheet {
      * @param pickerInstance - Picker instance. For more information, read the jSuites picker documentation.
      * @returns string representing the HTML of the picker item.
      */
-    render?: (
-      option: string,
-      pickerInstance: Record<string, any>,
-    ) => string;
+    render?: (option: string, pickerInstance: Record<string, any>) => string;
 
     /** Initial value of the selectbox. */
     value?: string;
@@ -352,7 +349,11 @@ declare namespace jspreadsheet {
   /**
    * Item that makes up the toolbar configuration array. This item may have properties not described here. For more information, read the jSuites toolbar documentation.
    */
-  type ToolbarItem = (ToolbarIconItem | ToolbarSelectItem | ToolbarColorItem | ToolbarDivisorItem);
+  type ToolbarItem =
+    | ToolbarIconItem
+    | ToolbarSelectItem
+    | ToolbarColorItem
+    | ToolbarDivisorItem;
 
   interface NestedHeaderCell {
     id?: string;
@@ -383,7 +384,7 @@ declare namespace jspreadsheet {
   type MetaInformation = Record<string, any>;
 
   type ContextMenuItem = {
-    type?: 'line' | 'divisor' | 'default';
+    type?: "line" | "divisor" | "default";
     title: string;
     icon?: string;
     id?: string;
@@ -394,7 +395,8 @@ declare namespace jspreadsheet {
     submenu?: Array<ContextMenuItem>;
   };
 
-  type ContextMenuRole = "select-all"
+  type ContextMenuRole =
+    | "select-all"
     | "fill-handle"
     | "row"
     | "nested"
@@ -452,7 +454,7 @@ declare namespace jspreadsheet {
       items: ContextMenuItem[],
       role: ContextMenuRole,
       x: string | number | null,
-      y: string | number | null,
+      y: string | number | null
     ) => ContextMenuItem[] | null | undefined;
 
     /**
@@ -509,7 +511,7 @@ declare namespace jspreadsheet {
      */
     onbeforedeletecolumn?: (
       instance: WorksheetInstance,
-      removedColumns: number[],
+      removedColumns: number[]
     ) => undefined | boolean;
 
     /**
@@ -529,7 +531,12 @@ declare namespace jspreadsheet {
      * @param x - Column index of the cell whose formula triggered the event.
      * @param y - Row index of the cell whose formula triggered the event
      */
-    onbeforeformula?: (instance: WorksheetInstance, expression: string, x?: number, y?: number) => false | string | undefined;
+    onbeforeformula?: (
+      instance: WorksheetInstance,
+      expression: string,
+      x?: number,
+      y?: number
+    ) => false | string | undefined;
 
     /**
      * Occurs before a new column is inserted. If this method returns false, the insertion will be canceled.
@@ -539,10 +546,10 @@ declare namespace jspreadsheet {
     onbeforeinsertcolumn?: (
       instance: WorksheetInstance,
       columns: {
-        column: number,
-        options: Column,
-        data?: CellValue[]
-      }[],
+        column: number;
+        options: Column;
+        data?: CellValue[];
+      }[]
     ) => undefined | boolean;
 
     /**
@@ -553,9 +560,9 @@ declare namespace jspreadsheet {
     onbeforeinsertrow?: (
       instance: WorksheetInstance,
       rows: {
-        row: number,
-        data: CellValue[],
-      }[],
+        row: number;
+        data: CellValue[];
+      }[]
     ) => undefined | boolean;
 
     /**
@@ -608,7 +615,7 @@ declare namespace jspreadsheet {
       borderTopIndex: number,
       borderRightIndex: number,
       borderBottomIndex: number,
-      origin: Event | undefined,
+      origin: Event | undefined
     ) => false | undefined;
 
     /**
@@ -646,7 +653,7 @@ declare namespace jspreadsheet {
       instance: WorksheetInstance,
       colIndex: number,
       newValue: string,
-      oldValue: string,
+      oldValue: string
     ) => void;
 
     /**
@@ -657,7 +664,7 @@ declare namespace jspreadsheet {
      */
     onchangemeta?: (
       instance: WorksheetInstance,
-      cellName: Record<string, any>,
+      cellName: Record<string, any>
     ) => void;
 
     /**
@@ -671,7 +678,7 @@ declare namespace jspreadsheet {
       instance: WorksheetInstance,
       newPageNumber: number,
       oldPageNumber: number,
-      quantityPerPage: number,
+      quantityPerPage: number
     ) => void;
 
     /**
@@ -682,7 +689,7 @@ declare namespace jspreadsheet {
      */
     onchangestyle?: (
       instance: WorksheetInstance,
-      changes: Record<string, string>,
+      changes: Record<string, string>
     ) => void;
 
     /**
@@ -694,7 +701,7 @@ declare namespace jspreadsheet {
     oncomments?: (
       instance: WorksheetInstance,
       newComments: Record<string, string | null>,
-      oldComments: Record<string, string | null>,
+      oldComments: Record<string, string | null>
     ) => void;
 
     /**
@@ -708,7 +715,7 @@ declare namespace jspreadsheet {
       instance: WorksheetInstance,
       selectedRange: [number, number, number, number],
       copiedData: string,
-      cut: boolean | undefined,
+      cut: boolean | undefined
     ) => string | false | undefined;
 
     /**
@@ -742,7 +749,7 @@ declare namespace jspreadsheet {
       colIndex: number,
       rowIndex: number,
       input: null,
-      options: Column,
+      options: Column
     ) => void;
 
     /**
@@ -752,7 +759,7 @@ declare namespace jspreadsheet {
      */
     ondeletecolumn?: (
       instance: WorksheetInstance,
-      removedColumns: number[],
+      removedColumns: number[]
     ) => void;
 
     /**
@@ -760,10 +767,7 @@ declare namespace jspreadsheet {
      * @param instance - Instance of the worksheet where the change occurred.
      * @param removedRows - Indexes of the rows that were removed.
      */
-    ondeleterow?: (
-      instance: WorksheetInstance,
-      removedRows: number[],
-    ) => void;
+    ondeleterow?: (instance: WorksheetInstance, removedRows: number[]) => void;
 
     /**
      * Occurs when a closeEditor is called.
@@ -820,10 +824,10 @@ declare namespace jspreadsheet {
     oninsertcolumn?: (
       instance: WorksheetInstance,
       columns: {
-        column: number,
-        options: Column,
-        data?: CellValue[]
-      }[],
+        column: number;
+        options: Column;
+        data?: CellValue[];
+      }[]
     ) => void;
 
     /**
@@ -834,8 +838,8 @@ declare namespace jspreadsheet {
     oninsertrow?: (
       instance: WorksheetInstance,
       rows: {
-        row: number,
-        data: CellValue[],
+        row: number;
+        data: CellValue[];
       }[]
     ) => void;
 
@@ -843,9 +847,7 @@ declare namespace jspreadsheet {
      * Event fired when a spreadsheet is created.
      * @param instance - Jspreadsheet instance.
      */
-    onload?: (
-      instance: SpreadsheetInstance
-    ) => void;
+    onload?: (instance: SpreadsheetInstance) => void;
 
     /**
      * Occurs when a group of cells is merged.
@@ -854,7 +856,7 @@ declare namespace jspreadsheet {
      */
     onmerge?: (
       instance: WorksheetInstance,
-      merges: Record<string, [number, number]>,
+      merges: Record<string, [number, number]>
     ) => void;
 
     /**
@@ -868,7 +870,7 @@ declare namespace jspreadsheet {
       instance: WorksheetInstance,
       oldPosition: number,
       newPosition: number,
-      quantity: number,
+      quantity: number
     ) => void;
 
     /**
@@ -882,7 +884,7 @@ declare namespace jspreadsheet {
       instance: WorksheetInstance,
       oldPosition: number,
       newPosition: number,
-      quantity: number,
+      quantity: number
     ) => void;
 
     /**
@@ -893,9 +895,9 @@ declare namespace jspreadsheet {
     onpaste?: (
       instance: WorksheetInstance,
       pastedInfo: {
-        x: number,
-        y: number,
-        value: CellValue,
+        x: number;
+        y: number;
+        value: CellValue;
       }[][]
     ) => void;
 
@@ -920,7 +922,7 @@ declare namespace jspreadsheet {
       instance: WorksheetInstance,
       colIndex: number | number[],
       newWidth: number | number[],
-      oldWidth: number | number[],
+      oldWidth: number | number[]
     ) => void;
 
     /**
@@ -964,7 +966,7 @@ declare namespace jspreadsheet {
       borderTopIndex: number,
       borderRightIndex: number,
       borderBottomIndex: number,
-      origin: Event | undefined,
+      origin: Event | undefined
     ) => void;
 
     /**
@@ -978,7 +980,7 @@ declare namespace jspreadsheet {
       instance: WorksheetInstance,
       colIndex: number,
       order: 0 | 1,
-      newOrderValues: number[],
+      newOrderValues: number[]
     ) => void;
 
     /**
@@ -1012,7 +1014,11 @@ declare namespace jspreadsheet {
     parseHTML?: boolean;
 
     /** Add custom toolbars. */
-    toolbar?: boolean | ToolbarItem[] | ((defaultToolbar: ToolbarItem[]) => ToolbarItem[]) | Record<string, any>;
+    toolbar?:
+      | boolean
+      | ToolbarItem[]
+      | ((defaultToolbar: ToolbarItem[]) => ToolbarItem[])
+      | Record<string, any>;
 
     /**
      * Worksheet settings.
@@ -1345,7 +1351,6 @@ declare namespace jspreadsheet {
      * @default 100
      */
     defaultZoom?: number;
-
   }
 
   interface JspreadsheetInstanceElement extends HTMLDivElement {
@@ -1460,7 +1465,11 @@ declare namespace jspreadsheet {
      * @param method - Name of the method whose execution needs to be saved on the server.
      * @param data - Arguments of the method whose execution needs to be saved on the server.
      */
-    persistence?: (instance: WorksheetInstance, method: string, data: any) => void;
+    persistence?: (
+      instance: WorksheetInstance,
+      method: string,
+      data: any
+    ) => void;
 
     /**
      * Method called before the context menu is displayed. If this method returns anything other than a falsy value, that value overrides the context menu settings.
@@ -1482,14 +1491,16 @@ declare namespace jspreadsheet {
       items: ContextMenuItem[],
       role: ContextMenuRole,
       x: number | null,
-      y: number | null,
+      y: number | null
     ) => ContextMenuItem[] | null | undefined;
 
     /**
      * Method called before the toolbar is displayed. If this method returns anything other than a falsy value, that value overrides the toolbar settings.
-     * @param defaultToolbar 
+     * @param defaultToolbar
      */
-    toolbar?: (defaultToolbar: ToolbarItem[]) => ToolbarItem[] | null | undefined;
+    toolbar?: (
+      defaultToolbar: ToolbarItem[]
+    ) => ToolbarItem[] | null | undefined;
   }
 
   interface SpreadsheetInstance {
@@ -1510,7 +1521,7 @@ declare namespace jspreadsheet {
 
     /**
      * Alias for el.
-    */
+     */
     element: JspreadsheetInstanceElement;
 
     /**
@@ -1581,8 +1592,8 @@ declare namespace jspreadsheet {
      * List of "col" tags for this spreadsheet's table
      */
     cols: {
-      colElement: HTMLTableColElement,
-      x: number,
+      colElement: HTMLTableColElement;
+      x: number;
     }[];
 
     /**
@@ -1670,7 +1681,7 @@ declare namespace jspreadsheet {
     download: (
       includeHeaders?: boolean,
       processed?: boolean,
-      type?: "csv"|"xlsx"
+      type?: "csv" | "xlsx"
     ) => void;
 
     /**
@@ -1749,9 +1760,7 @@ declare namespace jspreadsheet {
      * Get comments from one or all cells.
      * @param cell - Cell name. If it is a falsy value, the comments of all cells are returned.
      */
-    getComments: (
-      cell?: string
-    ) => Record<string, string> | string;
+    getComments: (cell?: string) => Record<string, string> | string;
 
     /**
      * Get worksheet config information.
@@ -1769,7 +1778,7 @@ declare namespace jspreadsheet {
       highlighted?: boolean,
       processed?: boolean,
       delimiter?: string,
-      asJson?: boolean,
+      asJson?: boolean
     ) => CellValue[][];
 
     /**
@@ -1805,7 +1814,7 @@ declare namespace jspreadsheet {
     /**
      * Get the coordinates of the highlighted selections.
      */
-    getHighlighted: () => [number, number, number, number][]
+    getHighlighted: () => [number, number, number, number][];
 
     /**
      * Get the innerHTML of a cell.
@@ -1846,18 +1855,20 @@ declare namespace jspreadsheet {
      */
     getRowData: (
       rowNumber: number,
-      processed?: boolean,
+      processed?: boolean
     ) => CellValue[] | undefined;
 
     /**
      * Get information from selected cells in the worksheet.
      * @param columnNameOnly - If true, the method returns the names of the selected cells. Otherwise, the method returns the records of the selected cells.
      */
-    getSelected: (columnNameOnly?: boolean) => {
-      element: HTMLTableCellElement[][],
-      x: number,
-      y: number,
-    }[] | string[];
+    getSelected: (columnNameOnly?: boolean) =>
+      | {
+          element: HTMLTableCellElement[][];
+          x: number;
+          y: number;
+        }[]
+      | string[];
 
     /**
      * Get indexes of the columns that have highlighted cells.
@@ -1891,10 +1902,7 @@ declare namespace jspreadsheet {
      * @param cell - Cell name.
      * @param processedValue - If true, it returns the cell's innerHTML. Otherwise, it returns the value of the cell in the {@link WorksheetOptions.data} property.
      */
-    getValue: (
-      cell: string,
-      processedValue?: boolean
-    ) => CellValue | null;
+    getValue: (cell: string, processedValue?: boolean) => CellValue | null;
 
     /**
      * Get the value of a cell by its coordinates.
@@ -1955,9 +1963,9 @@ declare namespace jspreadsheet {
      * List of highlighted cells.
      */
     highlighted: {
-      element: HTMLTableCellElement,
-      x: number,
-      y: number,
+      element: HTMLTableCellElement;
+      x: number;
+      y: number;
     }[];
 
     /**
@@ -2063,7 +2071,11 @@ declare namespace jspreadsheet {
      * @param empty - If true, the editor opens without content even if the cell had content.
      * @param event - Js event that triggered the editor opening. This argument is passed to the "openEditor" method of custom editors.
      */
-    openEditor: (cell: HTMLTableCellElement, empty?: boolean, event?: KeyboardEvent | MouseEvent | TouchEvent) => void;
+    openEditor: (
+      cell: HTMLTableCellElement,
+      empty?: boolean,
+      event?: KeyboardEvent | MouseEvent | TouchEvent
+    ) => void;
 
     /**
      * Open the column filter.
@@ -2131,9 +2143,9 @@ declare namespace jspreadsheet {
      * List of HTML elements representing table cells.
      */
     records: {
-      element: HTMLTableCellElement[][],
-      x: number,
-      y: number,
+      element: HTMLTableCellElement[][];
+      x: number;
+      y: number;
     }[][];
 
     /**
@@ -2146,10 +2158,7 @@ declare namespace jspreadsheet {
      * @param cellName - Merge anchor cell.
      * @param data - Data to be placed in cells released from the merge.
      */
-    removeMerge: (
-      cellName: string,
-      data?: CellValue[],
-    ) => void;
+    removeMerge: (cellName: string, data?: CellValue[]) => void;
 
     /**
      * Reset all filters.
@@ -2198,8 +2207,8 @@ declare namespace jspreadsheet {
      * List of rows that make up the table.
      */
     rows: {
-      element: HTMLTableRowElement,
-      y: number,
+      element: HTMLTableRowElement;
+      y: number;
     }[];
 
     /**
@@ -2242,25 +2251,24 @@ declare namespace jspreadsheet {
      * @param data - New data. Positions with the null value are not changed in the table.
      * @param force - If true, the method also changes the contents of readonly columns.
      */
-    setColumnData: (colNumber: number, data: (CellValue | null)[], force?: boolean) => void;
+    setColumnData: (
+      colNumber: number,
+      data: (CellValue | null)[],
+      force?: boolean
+    ) => void;
 
     /**
      * Set or remove a comment.
      * @param cellId - Name of the cell.
      * @param comments - New comment. If it is a falsy value, the method just uncomments the cell.
      */
-    setComments(
-      cellId: string,
-      comments: string,
-    ): void;
+    setComments(cellId: string, comments: string): void;
 
     /**
      * Set or remove comments.
      * @param cellId - Object whose keys are cell names and values ​​are cell comments. If the value of a key is a falsy value, the cell comment is removed.
      */
-    setComments(
-      cellId: Record<string, string>,
-    ): void;
+    setComments(cellId: Record<string, string>): void;
 
     /**
      * Change the worksheet or spreadsheet settings.
@@ -2273,9 +2281,7 @@ declare namespace jspreadsheet {
      * Set data.
      * @param data - New data. It can be an array of cell values or an array of objects whose values are cell values.
      */
-    setData: (
-      data?: CellValue[][] | Record<string, CellValue>[]
-    ) => void;
+    setData: (data?: CellValue[][] | Record<string, CellValue>[]) => void;
 
     /**
      * Set a column title.
@@ -2300,17 +2306,14 @@ declare namespace jspreadsheet {
      * Set Footer
      * @param footers - Footers
      */
-    setFooter: (footers:string[][]) => void;
+    setFooter: (footers: string[][]) => void;
 
     /**
      * Change row height.
      * @param row - Row index.
      * @param height - New height. An integer greater than zero.
      */
-    setHeight: (
-      row: number,
-      height: number,
-    ) => void;
+    setHeight: (row: number, height: number) => void;
 
     /**
      * Merge cells.
@@ -2322,7 +2325,7 @@ declare namespace jspreadsheet {
     setMerge: (
       cellName?: string,
       colspan?: number,
-      rowspan?: number,
+      rowspan?: number
     ) => null | undefined;
 
     /**
@@ -2352,7 +2355,11 @@ declare namespace jspreadsheet {
      * @param data - New data. Positions with the null value are not changed in the table.
      * @param force - If true, the method also changes the contents of readonly columns.
      */
-    setRowData: (rowNumber: number, data: (CellValue | null)[], force?: boolean) => void;
+    setRowData: (
+      rowNumber: number,
+      data: (CellValue | null)[],
+      force?: boolean
+    ) => void;
 
     /**
      * Change a single style of one or more cells.
@@ -2361,12 +2368,7 @@ declare namespace jspreadsheet {
      * @param v - New property value. If equal to the property's current value and the "force" parameter is false, removes that property from the style.
      * @param force - If true, changes the value of the property even if the cell is read-only. Also, if true, even if the new value of the property is the same as the current one, the property is not removed.
      */
-    setStyle(
-      o: string,
-      k: string,
-      v: string,
-      force?: boolean,
-    ): void;
+    setStyle(o: string, k: string, v: string, force?: boolean): void;
 
     /**
      * Change cell styles.
@@ -2379,7 +2381,7 @@ declare namespace jspreadsheet {
       o: Record<string, string | string[]>,
       k?: null | undefined,
       v?: null | undefined,
-      force?: boolean,
+      force?: boolean
     ): void;
 
     /**
@@ -2427,10 +2429,7 @@ declare namespace jspreadsheet {
      * @param column - Column indexes.
      * @param width - New widths.
      */
-    setWidth(
-      column: number[],
-      width: number | number[],
-    ): void;
+    setWidth(column: number[], width: number | number[]): void;
 
     /**
      * Show hidden column.
@@ -2497,7 +2496,7 @@ declare namespace jspreadsheet {
       x1: number | null,
       y1: number | null,
       x2?: number | null,
-      y2?: number | null,
+      y2?: number | null
     ) => false | undefined;
 
     /**
@@ -2521,7 +2520,10 @@ declare namespace jspreadsheet {
      * @param element - Table element.
      * @param options - Worksheet options.
      */
-    createFromTable: (element: HTMLTableElement, options: WorksheetOptions) => WorksheetOptions;
+    createFromTable: (
+      element: HTMLTableElement,
+      options: WorksheetOptions
+    ) => WorksheetOptions;
 
     /**
      * Internal method.
@@ -2554,9 +2556,7 @@ declare namespace jspreadsheet {
      * @param range - Range in "A1:B2" style.
      * @returns Array filled with the x and y coordinates of the first and last cells in the range.
      */
-    getCoordsFromRange: (
-      range: string
-    ) => [number, number, number, number];
+    getCoordsFromRange: (range: string) => [number, number, number, number];
 
     /**
      * Internal method.
@@ -2602,7 +2602,10 @@ declare namespace jspreadsheet {
      * @param worksheetName - Name of the searched worksheet. If null or undefined, the method returns the found namespace.
      * @param namespace - Namespace name.
      */
-    getWorksheetInstanceByName: (worksheetName: string | null | undefined, namespace: string) => WorksheetInstance | Record<string, WorksheetInstance>;
+    getWorksheetInstanceByName: (
+      worksheetName: string | null | undefined,
+      namespace: string
+    ) => WorksheetInstance | Record<string, WorksheetInstance>;
 
     helpers: JssHelpers;
 

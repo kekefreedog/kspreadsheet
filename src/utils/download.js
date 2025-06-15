@@ -10,37 +10,86 @@ export const download = function(includeHeaders, processed, type = "csv") {
     }
 
     // Get raw data string
-    const rawData = copy.call(obj, false, obj.options.csvDelimiter, true, includeHeaders, true, undefined, processed);
+    const rawData = copy.call(
+        obj,
+        false,
+        obj.options.csvDelimiter,
+        true,
+        includeHeaders,
+        true,
+        undefined,
+        processed
+    );
 
     if (type === "xlsx") {
-        
         const delimiter = obj.options.csvDelimiter || "\t";
+        const columnTypes = obj.options.columns?.map(col => col.type) || [];
 
-        let rows = rawData.split("\r\n").map(row =>
-            row.split(delimiter).map(cell => {
-                const cleaned = cell.replace(/^"|"$/g, "").replace(/""/g, '"');
+        // Format number as string with comma and 2 decimals
+        function formatWithCommaDecimals(value) {
+            const num = Number(value);
+            if (isNaN(num)) return value;
+            return num.toFixed(2).replace(".", ","); // e.g. 4.454342 → "4,45"
+        }
 
-                // Replace dot with comma only for decimal numbers (e.g. 123.45)
-                const isDecimal = /^-?\d+\.\d+$/.test(cleaned);
-                return isDecimal ? `'${cleaned.replace(".", ",")}` : cleaned;
-            })
-        );
+        const rawRows = rawData
+            .split("\r\n")
+            .filter(row => row.trim().length > 0) // remove empty rows
+            .map(row =>
+                row.split(delimiter).map(cell =>
+                    cell.replace(/^"|"$/g, "").replace(/""/g, '"')
+                )
+            );
 
-        // Normalize all rows to same length
-        const maxLength = Math.max(...rows.map(r => r.length));
-        rows.forEach(r => {
-            while (r.length < maxLength) r.push("");
+        // Get consistent row length from header
+        const maxLength = Math.max(...rawRows.map(r => r.length));
+
+        const sheet = {};
+        const range = { s: { c: 0, r: 0 }, e: { c: 0, r: 0 } };
+
+        rawRows.forEach((row, rowIndex) => {
+            row.forEach((cell, colIndex) => {
+                const isHeader = includeHeaders && rowIndex === 0;
+                const colType = columnTypes[colIndex];
+                const isNumericCol =
+                    colType === "number" ||
+                    colType === "numeric" ||
+                    colType === "decimal";
+
+                // Apply formatting only on numeric data (not header)
+                const value =
+                    !isHeader && isNumericCol
+                        ? formatWithCommaDecimals(cell)
+                        : cell;
+
+                const cellRef = XLSX.utils.encode_cell({
+                    r: rowIndex,
+                    c: colIndex,
+                });
+
+                sheet[cellRef] = {
+                    t: "s",   // Force string type
+                    v: value, // Final formatted value
+                    z: "@"    // Excel 'Text' cell format
+                };
+
+                if (range.e.r < rowIndex) range.e.r = rowIndex;
+                if (range.e.c < colIndex) range.e.c = colIndex;
+            });
+
+            // Ensure no padding columns are added
+            while (row.length < maxLength) {
+                row.push("");
+            }
         });
 
-        // Build worksheet & workbook
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, obj.options.worksheetName || "Sheet1");
+        sheet["!ref"] = XLSX.utils.encode_range(range);
 
-        // Convert to binary string
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, obj.options.worksheetName || "Sheet1");
+
         const wbout = XLSX.write(wb, { bookType: "xlsx", type: "binary" });
 
-        // Binary string to Blob
         function s2ab(s) {
             const buf = new ArrayBuffer(s.length);
             const view = new Uint8Array(buf);
@@ -50,27 +99,43 @@ export const download = function(includeHeaders, processed, type = "csv") {
             return buf;
         }
 
-        const blob = new Blob([s2ab(wbout)], { type: "application/octet-stream" });
+        const blob = new Blob([s2ab(wbout)], {
+            type: "application/octet-stream",
+        });
 
-        // Trigger download
         const pom = document.createElement("a");
         const url = URL.createObjectURL(blob);
         pom.href = url;
-        pom.setAttribute("download", (obj.options.csvFileName || obj.options.worksheetName || "export") + ".xlsx");
+        pom.setAttribute(
+            "download",
+            (obj.options.csvFileName || obj.options.worksheetName || "export") + ".xlsx"
+        );
         document.body.appendChild(pom);
         pom.click();
         pom.parentNode.removeChild(pom);
     } else {
-        // Default to CSV
-        const blob = new Blob(["\uFEFF" + rawData], { type: "text/csv;charset=utf-8;" });
+        // CSV fallback
+        const blob = new Blob(["\uFEFF" + rawData], {
+            type: "text/csv;charset=utf-8;",
+        });
 
         if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-            window.navigator.msSaveOrOpenBlob(blob, (obj.options.csvFileName || obj.options.worksheetName || "export") + ".csv");
+            window.navigator.msSaveOrOpenBlob(
+                blob,
+                (obj.options.csvFileName ||
+                    obj.options.worksheetName ||
+                    "export") + ".csv"
+            );
         } else {
             const pom = document.createElement("a");
             const url = URL.createObjectURL(blob);
             pom.href = url;
-            pom.setAttribute("download", (obj.options.csvFileName || obj.options.worksheetName || "export") + ".csv");
+            pom.setAttribute(
+                "download",
+                (obj.options.csvFileName ||
+                    obj.options.worksheetName ||
+                    "export") + ".csv"
+            );
             document.body.appendChild(pom);
             pom.click();
             pom.parentNode.removeChild(pom);
