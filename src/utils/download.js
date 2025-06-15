@@ -22,7 +22,7 @@ export const download = function(includeHeaders, processed, type = "csv") {
 
                 // Replace dot with comma only for decimal numbers (e.g. 123.45)
                 const isDecimal = /^-?\d+\.\d+$/.test(cleaned);
-                return isDecimal ? cleaned.replace(".", ",") : cleaned;
+                return isDecimal ? `'${cleaned.replace(".", ",")}` : cleaned;
             })
         );
 
