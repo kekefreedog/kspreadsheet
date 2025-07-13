@@ -10,6 +10,10 @@
 
 ## Kspreadsheet
 
+### Kspreadsheet 2.2.2
+
+- New xlsx donwload script
+
 ### Kspreadsheet 2.2.1
 
 - Fix "," and "." in number when downloading xlsx
