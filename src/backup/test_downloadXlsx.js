@@ -10,6 +10,7 @@ window.instance = jspreadsheet(root, {
     toolbar: true,
     worksheets: [{
         minDimensions: [10,20],
+        worksheetName: "Sulivan",
         columns: [
         /* Nom */
         {
