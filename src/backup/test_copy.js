@@ -15,21 +15,16 @@ window.jss = jspreadsheet;
 window.instance = jspreadsheet(root, {
     worksheets: [
         {
-            data:data,
+            data: data,
             colHeaders: ['Model', 'Year', 'Price', 'Date'],
-            colWidths: [ 300, 80, 100, 100 ],
-            columns: [
-                { type: 'text' },
-                { type: 'text' },
-                { type: 'text' },
-                { type: 'calendar' },
-            ],
-            mergeCells:{
-                A1:[2,1]
+            colWidths: [300, 80, 100, 100],
+            columns: [{ type: 'text' }, { type: 'text' }, { type: 'text' }, { type: 'calendar' }],
+            mergeCells: {
+                A1: [2, 1],
             },
-            minDimensions:[10,10]
-        }
+            minDimensions: [10, 10],
+        },
     ],
-})
+});
 
 let worksheets = window.instance;

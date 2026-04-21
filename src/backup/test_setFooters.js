@@ -6,25 +6,11 @@ import 'jsuites/dist/jsuites.css';
 window.jss = jspreadsheet;
 
 let footers = [
-    [
-        'Total',
-        '=SUM(B1:B4)',
-        '=SUM(C1:C4)',
-    ],
-    [
-        'Total',
-        '=SUM(B1:B4)',
-        '=SUM(C1:C4)',
-    ]
+    ['Total', '=SUM(B1:B4)', '=SUM(C1:C4)'],
+    ['Total', '=SUM(B1:B4)', '=SUM(C1:C4)'],
 ];
 
-let footersNew = [
-    [
-        'Tonton',
-        '=SUM(B1:B4)&"%"',
-        '=SUM(C1:C4)&"%"',
-    ],
-];
+let footersNew = [['Tonton', '=SUM(B1:B4)&"%"', '=SUM(C1:C4)&"%"']];
 
 let records = [
     {
@@ -36,73 +22,57 @@ let records = [
         x: 3,
         y: 3,
         value: 'Another cell',
-    }
+    },
 ];
 
 window.instance = jspreadsheet(root, {
     tabs: true,
     toolbar: true,
-    worksheets: [{
-        data: [
-            ['Cheese', 10, 6.00],
-            ['Apples', 5, 4.00],
-            ['Carrots', 5, 1.00],
-            ['Oranges', 6, 2.00],
-        ],
-        footers: footers,
-        columns: [
-            { width:'400px' },
-        ]
-    }]
-})
+    worksheets: [
+        {
+            data: [
+                ['Cheese', 10, 6.0],
+                ['Apples', 5, 4.0],
+                ['Carrots', 5, 1.0],
+                ['Oranges', 6, 2.0],
+            ],
+            footers: footers,
+            columns: [{ width: '400px' }],
+        },
+    ],
+});
 
 let worksheets = window.instance;
 
-let getFooterEl = document.createElement("button");
+let getFooterEl = document.createElement('button');
 
-getFooterEl.innerText = "Get Footers";
+getFooterEl.innerText = 'Get Footers';
 
-getFooterEl.addEventListener("click", () => {
+getFooterEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) console.log(worksheet.getFooters());
+});
 
-    for(let worksheet of worksheets) 
-        
-        console.log(worksheet.getFooters());
+let setFooterEl = document.createElement('button');
 
-})
+setFooterEl.innerText = 'Set Footer';
 
-let setFooterEl = document.createElement("button");
+setFooterEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.setFooter(footersNew);
+});
+let resetFooterEl = document.createElement('button');
 
-setFooterEl.innerText = "Set Footer";
+resetFooterEl.innerText = 'Reset Footer';
 
-setFooterEl.addEventListener("click", () => {
+resetFooterEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.setFooter(footers);
+});
 
-    for(let worksheet of worksheets) 
-        
-        worksheet.setFooter(footersNew);
+let pushValueEl = document.createElement('button');
 
-})
-let resetFooterEl = document.createElement("button");
+pushValueEl.innerText = 'Push Value';
 
-resetFooterEl.innerText = "Reset Footer";
-
-resetFooterEl.addEventListener("click", () => {
-
-    for(let worksheet of worksheets) 
-        
-        worksheet.setFooter(footers);
-
-})
-
-let pushValueEl = document.createElement("button");
-
-pushValueEl.innerText = "Push Value";
-
-pushValueEl.addEventListener("click", () => {
-
-    for(let worksheet of worksheets) 
-
-        worksheet.setValue(records);
-
-})
+pushValueEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.setValue(records);
+});
 
 document.body.append(getFooterEl, setFooterEl, resetFooterEl, pushValueEl);

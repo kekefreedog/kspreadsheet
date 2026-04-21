@@ -8,43 +8,31 @@ window.jss = jspreadsheet;
 window.instance = jspreadsheet(root, {
     tabs: true,
     toolbar: true,
-    worksheets: [{
-        data: [
-            ['Cheese', 10, 6.00],
-            ['Apples', 5, 4.00],
-            ['Carrots', 5, 1.00],
-            ['Oranges', 6, 2.00],
-        ],
-        footers: [
-            [
-                'Total',
-                '=SUM(B1:B4)',
-                '=SUM(C1:C4)',
+    worksheets: [
+        {
+            data: [
+                ['Cheese', 10, 6.0],
+                ['Apples', 5, 4.0],
+                ['Carrots', 5, 1.0],
+                ['Oranges', 6, 2.0],
             ],
-            [
-                'Total',
-                '=SUM(B1:B4)',
-                '=SUM(C1:C4)',
-            ]
-        ],
-        columns: [
-            { width:'400px' },
-        ]
-    }]
-})
+            footers: [
+                ['Total', '=SUM(B1:B4)', '=SUM(C1:C4)'],
+                ['Total', '=SUM(B1:B4)', '=SUM(C1:C4)'],
+            ],
+            columns: [{ width: '400px' }],
+        },
+    ],
+});
 
 let worksheets = window.instance;
 
-let getFooterEl = document.createElement("button");
+let getFooterEl = document.createElement('button');
 
-getFooterEl.innerText = "Get Footers";
+getFooterEl.innerText = 'Get Footers';
 
-getFooterEl.addEventListener("click", () => {
-
-    for(let worksheet of worksheets) 
-        
-        console.log(worksheet.getFooters());
-
-})
+getFooterEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) console.log(worksheet.getFooters());
+});
 
 document.body.append(getFooterEl);

@@ -1,76 +1,67 @@
-.jss_worksheet > thead > tr > td
-{
+.jss_worksheet > thead > tr > td {
     border-top: 1px solid var(--jss_border_color, #ccc);
     border-left: 1px solid var(--jss_border_color, #ccc);
     background-color: var(--jss_header_background, #f3f3f3);
     color: var(--jss_header_color, #000);
 }
 
-.jss_worksheet > thead > tr > td.selected
-{
+.jss_worksheet > thead > tr > td.selected {
     background-color: var(--jss_header_background_highlighted, #dcdcdc);
     color: var(--jss_header_color_highlighted, #000);
 }
 
-.jss_worksheet > tfoot > tr > td 
-{
+.jss_worksheet > tfoot > tr > td {
     color: var(--jss_header_color, #000);
 }
 
-.jss_worksheet > tbody > tr > td:first-child
-{
+.jss_worksheet > tbody > tr > td:first-child {
     background-color: var(--jss_header_background, #f3f3f3);
     color: var(--jss_header_color, #000);
 }
 
-.jss_worksheet > tbody > tr > td
-{
+.jss_worksheet > tbody > tr > td {
     background-color: var(--jss_content_background, #fff);
     color: var(--jss_content_color, #000);
     border-top: 1px solid var(--jss_border_color, #ccc);
     border-left: 1px solid var(--jss_border_color, #ccc);
 }
 
-.jss_worksheet > tbody > tr.selected > td:first-child
-{
+.jss_worksheet > tbody > tr.selected > td:first-child {
     background-color: var(--jss_header_background_highlighted, #dcdcdc);
     color: var(--jss_header_color_highlighted, #000);
 }
 
 .jss_worksheet .highlight {
-    background-color: var(--jss_selection, rgba(0,0,0,0.05));
+    background-color: var(--jss_selection, rgba(0, 0, 0, 0.05));
 }
 
 .jss_worksheet .highlight-top {
-    border-top:1px solid var(--jss_border_color_highlighted, #000);
+    border-top: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
 .jss_worksheet .highlight-left {
-    border-left:1px solid var(--jss_border_color_highlighted, #000);
+    border-left: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
 .jss_worksheet .highlight-right {
-    border-right:1px solid var(--jss_border_color_highlighted, #000);
+    border-right: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
 .jss_worksheet .highlight-bottom {
-    border-bottom:1px solid var(--jss_border_color_highlighted, #000);
+    border-bottom: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
-.jss_worksheet .highlight-selected
-{
+.jss_worksheet .highlight-selected {
     background-color: var(--jss_cursor, #eee);
 }
 
-.jss_pagination > div > div
-{
+.jss_pagination > div > div {
     color: var(--jss_header_color, #000);
     background: var(--jss_header_background, #f3f3f3);
     border: 1px solid var(--jss_border_color, #ccc);
 }
 
-.jss_toolbar
-{
+.jss_toolbar {
     background-color: var(--jss_header_background, #f3f3f3);
     color: var(--jss_header_color, #000);
     border: 1px solid var(--jss_border_color, #ccc);
@@ -96,18 +87,18 @@
     color: var(--jss_menu_color, #555);
     box-shadow: var(--jss_menu_box_shadow, 2px 2px 2px 0px rgba(143, 144, 145, 1));
     -webkit-box-shadow: var(--jss_menu_box_shadow, 2px 2px 2px 0px rgba(143, 144, 145, 1));
-    -moz-box-shadow: var(--jss_menu_box_shadow, 2px 2px 2px 0px rgba(143, 144, 145, 1))
+    -moz-box-shadow: var(--jss_menu_box_shadow, 2px 2px 2px 0px rgba(143, 144, 145, 1));
 }
 
-.jss_contextmenu>div a {
+.jss_contextmenu > div a {
     color: var(--jss_menu_color, #555);
 }
 
-.jss_contextmenu>div:not(.contextmenu-line):hover a {
+.jss_contextmenu > div:not(.contextmenu-line):hover a {
     color: var(--jss_menu_color_highlighted, #555);
 }
 
-.jss_contextmenu>div:not(.contextmenu-line):hover {
+.jss_contextmenu > div:not(.contextmenu-line):hover {
     background: var(--jss_menu_background_highlighted, #ebebeb);
 }
 
@@ -116,32 +107,25 @@
     background: var(--jss_header_background, #f3f3f3);
 }
 
-.jss_worksheet .editor .jupload, .jss_worksheet .editor .jss_richtext {
-
-    font-size: var(--jss_editor_font_size, .875rem);
-
+.jss_worksheet .editor .jupload,
+.jss_worksheet .editor .jss_richtext {
+    font-size: var(--jss_editor_font_size, 0.875rem);
 }
 
 .jss_worksheet .editor .jclose:after {
-
     font-size: var(--jss_editor_icon_size, 24px);
-
 }
 
-.jss_page, .jss_worksheet > thead > tr > td, .jss_worksheet > tbody > tr > td {
-
+.jss_page,
+.jss_worksheet > thead > tr > td,
+.jss_worksheet > tbody > tr > td {
     font-size: var(--jss_font_size, 0.8em);
-
 }
 
 .jcontextmenu > div a {
-
-    font-size: var(--jss_contextmenu_font_size, 16px)!important;
-
+    font-size: var(--jss_contextmenu_font_size, 16px) !important;
 }
 
 .jss_about {
-
     font-size: var(--jss_about_font_size, 24px);
-
 }

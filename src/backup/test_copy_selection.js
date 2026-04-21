@@ -15,13 +15,13 @@ window.jss = jspreadsheet;
 window.instance = jspreadsheet(root, {
     worksheets: [
         {
-            minDimensions: [40,20],
+            minDimensions: [40, 20],
             tableOverflow: true,
             lazyLoading: true,
             tableWidth: '1000px',
-            freezeColumns: 2,    
+            freezeColumns: 2,
             filters: true,
-            nestedHeaders:[
+            nestedHeaders: [
                 [
                     {
                         title: 'Supermarket information',
@@ -29,8 +29,8 @@ window.instance = jspreadsheet(root, {
                     },
                     {
                         title: ' Other Information',
-                        colspan: '38'
-                    }
+                        colspan: '38',
+                    },
                 ],
                 [
                     {
@@ -47,12 +47,12 @@ window.instance = jspreadsheet(root, {
                     },
                     {
                         title: ' Other Information',
-                        colspan: '35'
-                    }
+                        colspan: '35',
+                    },
                 ],
-            ]
-        }
+            ],
+        },
     ],
-})
+});
 
 let worksheets = window.instance;

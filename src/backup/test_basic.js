@@ -8,8 +8,9 @@ window.jss = jspreadsheet;
 window.instance = jspreadsheet(root, {
     tabs: true,
     toolbar: true,
-    worksheets: [{
-        minDimensions: [10,20],
-    }],
-})
-
+    worksheets: [
+        {
+            minDimensions: [10, 20],
+        },
+    ],
+});

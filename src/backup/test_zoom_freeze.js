@@ -8,90 +8,84 @@ window.jss = jspreadsheet;
 window.instance = jspreadsheet(root, {
     tabs: true,
     toolbar: true,
-    worksheets: [{
-        minDimensions: [40,20],
-        tableOverflow: true,
-        lazyLoading: true,
-        tableWidth: '1000px',
-        freezeColumns: 2,  
-        filters: true,
-        nestedHeaders:[
-            [
-                {
-                    title: 'Supermarket information',
-                    colspan: '2',
-                },
-                {
-                    title: ' Other Information',
-                    colspan: '38'
-                }
+    worksheets: [
+        {
+            minDimensions: [40, 20],
+            tableOverflow: true,
+            lazyLoading: true,
+            tableWidth: '1000px',
+            freezeColumns: 2,
+            filters: true,
+            nestedHeaders: [
+                [
+                    {
+                        title: 'Supermarket information',
+                        colspan: '2',
+                    },
+                    {
+                        title: ' Other Information',
+                        colspan: '38',
+                    },
+                ],
+                [
+                    {
+                        title: 'Location',
+                        colspan: '1',
+                    },
+                    {
+                        title: 'Location',
+                        colspan: '1',
+                    },
+                    {
+                        title: 'Location',
+                        colspan: '3',
+                    },
+                    {
+                        title: ' Other Information',
+                        colspan: '35',
+                    },
+                ],
             ],
-            [
-                {
-                    title: 'Location',
-                    colspan: '1',
-                },
-                {
-                    title: 'Location',
-                    colspan: '1',
-                },
-                {
-                    title: 'Location',
-                    colspan: '3',
-                },
-                {
-                    title: ' Other Information',
-                    colspan: '35'
-                }
-            ],
-        ],
-        defaultZoom: 100
-    }],
-    defaultZoom: 150
-})
+            defaultZoom: 100,
+        },
+    ],
+    defaultZoom: 150,
+});
 
 let worksheets = window.instance;
 
 console.log(worksheets);
 
-let zoomInEl = document.createElement("button");
+let zoomInEl = document.createElement('button');
 
-zoomInEl.innerText = "Zoom In";
+zoomInEl.innerText = 'Zoom In';
 
-zoomInEl.addEventListener("click", () => {
+zoomInEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.zoomIn();
+});
 
-    for(let worksheet of worksheets) worksheet.zoomIn();
+let zoomOutEl = document.createElement('button');
 
-})
+zoomOutEl.innerText = 'Zoom Out';
 
-let zoomOutEl = document.createElement("button");
+zoomOutEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.zoomOut();
+});
 
-zoomOutEl.innerText = "Zoom Out";
+let zoomDefault = document.createElement('button');
 
-zoomOutEl.addEventListener("click", () => {
-    
-    for(let worksheet of worksheets) worksheet.zoomOut();
-    
-})
+zoomDefault.innerText = 'Zoom Default';
 
-let zoomDefault = document.createElement("button");
+zoomDefault.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.resetZoom();
+});
 
-zoomDefault.innerText = "Zoom Default";
+let zoomGet = document.createElement('button');
 
-zoomDefault.addEventListener("click", () => {
-    
-    for(let worksheet of worksheets) worksheet.resetZoom();
-    
-})
+zoomGet.innerText = 'Get Zoom';
 
-let zoomGet = document.createElement("button");
-
-zoomGet.innerText = "Get Zoom";
-
-zoomGet.addEventListener("click", () => {
-
-    for(let worksheet of worksheets) worksheet.getZoom();
-
-})
+zoomGet.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.getZoom();
+});
 
 document.body.append(zoomInEl, zoomOutEl, zoomDefault, zoomGet);

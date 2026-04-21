@@ -8,10 +8,10 @@ window.jss = jspreadsheet;
 window.instance = jspreadsheet(root, {
     worksheets: [
         {
-            minDimensions: [10,10],
-            defaultCellType: "checkbox"
-        }
+            minDimensions: [10, 10],
+            defaultCellType: 'checkbox',
+        },
     ],
-})
+});
 
 let worksheets = window.instance;

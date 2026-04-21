@@ -8,55 +8,49 @@ window.jss = jspreadsheet;
 window.instance = jspreadsheet(root, {
     tabs: true,
     toolbar: true,
-    worksheets: [{
-        minDimensions: [6,6],
-        defaultZoom: 125        // Zoom in specific worksheet
-    }],
-    defaultZoom: 150            // Zoom on all worksheets
-})
+    worksheets: [
+        {
+            minDimensions: [6, 6],
+            defaultZoom: 125, // Zoom in specific worksheet
+        },
+    ],
+    defaultZoom: 150, // Zoom on all worksheets
+});
 
 let worksheets = window.instance;
 
 console.log(worksheets);
 
-let zoomInEl = document.createElement("button");
+let zoomInEl = document.createElement('button');
 
-zoomInEl.innerText = "Zoom In";
+zoomInEl.innerText = 'Zoom In';
 
-zoomInEl.addEventListener("click", () => {
+zoomInEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.zoomIn();
+});
 
-    for(let worksheet of worksheets) worksheet.zoomIn();
+let zoomOutEl = document.createElement('button');
 
-})
+zoomOutEl.innerText = 'Zoom Out';
 
-let zoomOutEl = document.createElement("button");
+zoomOutEl.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.zoomOut();
+});
 
-zoomOutEl.innerText = "Zoom Out";
+let zoomDefault = document.createElement('button');
 
-zoomOutEl.addEventListener("click", () => {
-    
-    for(let worksheet of worksheets) worksheet.zoomOut();
-    
-})
+zoomDefault.innerText = 'Zoom Default';
 
-let zoomDefault = document.createElement("button");
+zoomDefault.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.resetZoom();
+});
 
-zoomDefault.innerText = "Zoom Default";
+let zoomGet = document.createElement('button');
 
-zoomDefault.addEventListener("click", () => {
-    
-    for(let worksheet of worksheets) worksheet.resetZoom();
-    
-})
+zoomGet.innerText = 'Get Zoom';
 
-let zoomGet = document.createElement("button");
-
-zoomGet.innerText = "Get Zoom";
-
-zoomGet.addEventListener("click", () => {
-
-    for(let worksheet of worksheets) worksheet.getZoom();
-
-})
+zoomGet.addEventListener('click', () => {
+    for (let worksheet of worksheets) worksheet.getZoom();
+});
 
 document.body.append(zoomInEl, zoomOutEl, zoomDefault, zoomGet);
