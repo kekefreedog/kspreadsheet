@@ -51,28 +51,31 @@ export const openEditor = function (cell, empty, e) {
         // Holder
         obj.edition = [obj.records[y][x].element, obj.records[y][x].element.innerHTML, x, y];
 
+        // Resolve effective cell type (column-specific or defaultCellType fallback)
+        const editorColType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType || null;
+
         // If there is a custom editor for it
-        if (obj.options.columns && obj.options.columns[x] && typeof obj.options.columns[x].type === 'object') {
+        if (editorColType && typeof editorColType === 'object') {
             // Custom editors
-            obj.options.columns[x].type.openEditor(cell, obj.options.data[y][x], parseInt(x), parseInt(y), obj, obj.options.columns[x], e);
+            editorColType.openEditor(cell, obj.options.data[y][x], parseInt(x), parseInt(y), obj, obj.options.columns && obj.options.columns[x], e);
 
             // On edition start
-            dispatch.call(obj, 'oncreateeditor', obj, cell, parseInt(x), parseInt(y), null, obj.options.columns[x]);
+            dispatch.call(obj, 'oncreateeditor', obj, cell, parseInt(x), parseInt(y), null, obj.options.columns && obj.options.columns[x]);
         } else {
             // Native functions
-            if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'hidden') {
+            if (editorColType == 'hidden') {
                 // Do nothing
-            } else if (obj.options.columns && obj.options.columns[x] && (obj.options.columns[x].type == 'checkbox' || obj.options.columns[x].type == 'radio')) {
+            } else if (editorColType == 'checkbox' || editorColType == 'radio') {
                 // Get value
                 const value = cell.children[0].checked ? false : true;
-                // Toogle value
+                // Toggle value
                 obj.setValue(cell, value);
                 // Do not keep edition open
                 obj.edition = null;
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'dropdown') {
+            } else if (editorColType == 'dropdown') {
                 // Get current value
                 let value = obj.options.data[y][x];
-                if (obj.options.columns[x].multiple && !Array.isArray(value)) {
+                if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].multiple && !Array.isArray(value)) {
                     value = value.split(';');
                 }
 
@@ -116,7 +119,7 @@ export const openEditor = function (cell, empty, e) {
                     options.type = obj.options.columns[x].options.type;
                 }
                 jSuites.dropdown(editor, options);
-            } else if (obj.options.columns && obj.options.columns[x] && (obj.options.columns[x].type == 'calendar' || obj.options.columns[x].type == 'color')) {
+            } else if (editorColType == 'calendar' || editorColType == 'color') {
                 // Value
                 const value = obj.options.data[y][x];
                 // Create editor
@@ -137,7 +140,7 @@ export const openEditor = function (cell, empty, e) {
                     closeEditor.call(obj, cell, true);
                 };
                 // Current value
-                if (obj.options.columns[x].type == 'color') {
+                if (editorColType == 'color') {
                     jSuites.color(editor, options);
 
                     const rect = cell.getBoundingClientRect();
@@ -155,7 +158,7 @@ export const openEditor = function (cell, empty, e) {
                 }
                 // Focus on editor
                 editor.focus();
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'html') {
+            } else if (editorColType == 'html') {
                 const value = obj.options.data[y][x];
                 // Create editor
                 const editor = createEditor('div');
@@ -183,7 +186,7 @@ export const openEditor = function (cell, empty, e) {
                 } else {
                     div.style.left = rect.left + 'px';
                 }
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'image') {
+            } else if (editorColType == 'image') {
                 // Value
                 const img = cell.children[0];
                 // Create editor
@@ -284,30 +287,29 @@ export const closeEditor = function (cell, save) {
 
     // Get cell properties
     if (save == true) {
+        // Resolve effective cell type (column-specific or defaultCellType fallback)
+        const closeColType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType || null;
+
         // If custom editor
-        if (obj.options.columns && obj.options.columns[x] && typeof obj.options.columns[x].type === 'object') {
+        if (closeColType && typeof closeColType === 'object') {
             // Custom editor
-            value = obj.options.columns[x].type.closeEditor(cell, save, parseInt(x), parseInt(y), obj, obj.options.columns[x]);
+            value = closeColType.closeEditor(cell, save, parseInt(x), parseInt(y), obj, obj.options.columns && obj.options.columns[x]);
         } else {
             // Native functions
-            if (
-                obj.options.columns &&
-                obj.options.columns[x] &&
-                (obj.options.columns[x].type == 'checkbox' || obj.options.columns[x].type == 'radio' || obj.options.columns[x].type == 'hidden')
-            ) {
+            if (closeColType == 'checkbox' || closeColType == 'radio' || closeColType == 'hidden') {
                 // Do nothing
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'dropdown') {
+            } else if (closeColType == 'dropdown') {
                 value = cell.children[0].dropdown.close(true);
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'calendar') {
+            } else if (closeColType == 'calendar') {
                 value = cell.children[0].calendar.close(true);
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'color') {
+            } else if (closeColType == 'color') {
                 value = cell.children[0].color.close(true);
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'html') {
+            } else if (closeColType == 'html') {
                 value = cell.children[0].children[0].editor.getData();
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'image') {
+            } else if (closeColType == 'image') {
                 const img = cell.children[0].children[0].children[0];
                 value = img && img.tagName == 'IMG' ? img.src : '';
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'numeric') {
+            } else if (closeColType == 'numeric') {
                 value = cell.children[0].value;
                 if (('' + value).substr(0, 1) != '=') {
                     if (value == '') {
@@ -345,15 +347,16 @@ export const closeEditor = function (cell, save) {
             obj.setValue(cell, value);
         }
     } else {
-        if (obj.options.columns && obj.options.columns[x] && typeof obj.options.columns[x].type === 'object') {
+        const cancelColType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType || null;
+        if (cancelColType && typeof cancelColType === 'object') {
             // Custom editor
-            obj.options.columns[x].type.closeEditor(cell, save, parseInt(x), parseInt(y), obj, obj.options.columns[x]);
+            cancelColType.closeEditor(cell, save, parseInt(x), parseInt(y), obj, obj.options.columns && obj.options.columns[x]);
         } else {
-            if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'dropdown') {
+            if (cancelColType == 'dropdown') {
                 cell.children[0].dropdown.close(true);
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'calendar') {
+            } else if (cancelColType == 'calendar') {
                 cell.children[0].calendar.close(true);
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'color') {
+            } else if (cancelColType == 'color') {
                 cell.children[0].color.close(true);
             } else {
                 cell.children[0].onblur = null;
@@ -386,7 +389,8 @@ export const setCheckRadioValue = function () {
         const x = obj.highlighted[i].element.getAttribute('data-x');
         const y = obj.highlighted[i].element.getAttribute('data-y');
 
-        if (obj.options.columns[x].type == 'checkbox' || obj.options.columns[x].type == 'radio') {
+        const cellType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType || null;
+        if (cellType == 'checkbox' || cellType == 'radio') {
             // Update cell
             records.push(updateCell.call(obj, x, y, !obj.options.data[y][x]));
         }

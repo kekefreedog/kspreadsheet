@@ -405,32 +405,35 @@ export const createCell = function (i, j, value) {
         }
     }
 
-    // Custom column
-    if (obj.options.columns && obj.options.columns[i] && typeof obj.options.columns[i].type === 'object') {
+    // Resolve effective cell type: column-specific type takes priority, else defaultCellType
+    const colType = (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type) || obj.options.defaultCellType || null;
+
+    // Custom column (object type plugin)
+    if (colType && typeof colType === 'object') {
         if (obj.parent.config.parseHTML === true) {
             td.innerHTML = value;
         } else {
             td.textContent = value;
         }
-        if (typeof obj.options.columns[i].type.createCell == 'function') {
-            obj.options.columns[i].type.createCell(td, value, parseInt(i), parseInt(j), obj, obj.options.columns[i]);
+        if (typeof colType.createCell == 'function') {
+            colType.createCell(td, value, parseInt(i), parseInt(j), obj, obj.options.columns && obj.options.columns[i]);
         }
     } else {
         // Hidden column
-        if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type == 'hidden') {
+        if (colType == 'hidden') {
             td.style.display = 'none';
             td.textContent = value;
-        } else if (obj.options.columns && obj.options.columns[i] && (obj.options.columns[i].type == 'checkbox' || obj.options.columns[i].type == 'radio')) {
+        } else if (colType == 'checkbox' || colType == 'radio') {
             // Create input
             const element = document.createElement('input');
-            element.type = obj.options.columns[i].type;
+            element.type = colType;
             element.name = 'c' + i;
             element.checked = value == 1 || value == true || value == 'true' ? true : false;
             element.onclick = function () {
                 obj.setValue(td, this.checked);
             };
 
-            if (obj.options.columns[i].readOnly == true || obj.options.editable == false) {
+            if ((obj.options.columns && obj.options.columns[i] && obj.options.columns[i].readOnly == true) || obj.options.editable == false) {
                 element.setAttribute('disabled', 'disabled');
             }
 
@@ -438,13 +441,13 @@ export const createCell = function (i, j, value) {
             td.appendChild(element);
             // Make sure the values are correct
             obj.options.data[j][i] = element.checked;
-        } else if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type == 'calendar') {
+        } else if (colType == 'calendar') {
             // Try formatted date
             let formatted = null;
             if (!validDate(value)) {
                 const tmp = jSuites.calendar.extractDateFromString(
                     value,
-                    (obj.options.columns[i].options && obj.options.columns[i].options.format) || 'YYYY-MM-DD'
+                    (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].options && obj.options.columns[i].options.format) || 'YYYY-MM-DD'
                 );
                 if (tmp) {
                     formatted = tmp;
@@ -453,14 +456,14 @@ export const createCell = function (i, j, value) {
             // Create calendar cell
             td.textContent = jSuites.calendar.getDateString(
                 formatted ? formatted : value,
-                obj.options.columns[i].options && obj.options.columns[i].options.format
+                obj.options.columns && obj.options.columns[i] && obj.options.columns[i].options && obj.options.columns[i].options.format
             );
-        } else if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type == 'dropdown') {
+        } else if (colType == 'dropdown') {
             // Create dropdown cell
             td.classList.add('jss_dropdown');
             td.textContent = getDropDownValue.call(obj, i, value);
-        } else if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type == 'color') {
-            if (obj.options.columns[i].render == 'square') {
+        } else if (colType == 'color') {
+            if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].render == 'square') {
                 const color = document.createElement('div');
                 color.className = 'color';
                 color.style.backgroundColor = value;
@@ -469,14 +472,14 @@ export const createCell = function (i, j, value) {
                 td.style.color = value;
                 td.textContent = value;
             }
-        } else if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type == 'image') {
+        } else if (colType == 'image') {
             if (value && value.substr(0, 10) == 'data:image') {
                 const img = document.createElement('img');
                 img.src = value;
                 td.appendChild(img);
             }
         } else {
-            if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type == 'html') {
+            if (colType == 'html') {
                 td.innerHTML = stripScript(parseValue.call(this, i, j, value, td));
             } else {
                 if (obj.parent.config.parseHTML === true) {
@@ -586,7 +589,10 @@ export const updateCell = function (x, y, value, force) {
             oldValue: obj.options.data[y][x],
         };
 
-        let editor = obj.options.columns && obj.options.columns[x] && typeof obj.options.columns[x].type === 'object' ? obj.options.columns[x].type : null;
+        // Resolve effective cell type (column-specific or defaultCellType fallback)
+        const updateColType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType || null;
+
+        let editor = updateColType && typeof updateColType === 'object' ? updateColType : null;
         if (editor) {
             // Update data and cell
             obj.options.data[y][x] = value;
@@ -595,9 +601,9 @@ export const updateCell = function (x, y, value, force) {
             }
         } else {
             // Native functions
-            if (obj.options.columns && obj.options.columns[x] && (obj.options.columns[x].type == 'checkbox' || obj.options.columns[x].type == 'radio')) {
+            if (updateColType == 'checkbox' || updateColType == 'radio') {
                 // Unchecked all options
-                if (obj.options.columns[x].type == 'radio') {
+                if (updateColType == 'radio') {
                     for (let j = 0; j < obj.options.data.length; j++) {
                         obj.options.data[j][x] = false;
                     }
@@ -606,11 +612,11 @@ export const updateCell = function (x, y, value, force) {
                 // Update data and cell
                 obj.records[y][x].element.children[0].checked = value == 1 || value == true || value == 'true' || value == 'TRUE' ? true : false;
                 obj.options.data[y][x] = obj.records[y][x].element.children[0].checked;
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'dropdown') {
+            } else if (updateColType == 'dropdown') {
                 // Update data and cell
                 obj.options.data[y][x] = value;
                 obj.records[y][x].element.textContent = getDropDownValue.call(obj, x, value);
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'calendar') {
+            } else if (updateColType == 'calendar') {
                 // Try formatted date
                 let formatted = null;
                 if (!validDate(value)) {
@@ -628,11 +634,11 @@ export const updateCell = function (x, y, value, force) {
                     formatted ? formatted : value,
                     obj.options.columns[x].options && obj.options.columns[x].options.format
                 );
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'color') {
+            } else if (updateColType == 'color') {
                 // Update color
                 obj.options.data[y][x] = value;
                 // Render
-                if (obj.options.columns[x].render == 'square') {
+                if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].render == 'square') {
                     const color = document.createElement('div');
                     color.className = 'color';
                     color.style.backgroundColor = value;
@@ -642,7 +648,7 @@ export const updateCell = function (x, y, value, force) {
                     obj.records[y][x].element.style.color = value;
                     obj.records[y][x].element.textContent = value;
                 }
-            } else if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'image') {
+            } else if (updateColType == 'image') {
                 value = '' + value;
                 obj.options.data[y][x] = value;
                 obj.records[y][x].element.innerHTML = '';
@@ -655,7 +661,7 @@ export const updateCell = function (x, y, value, force) {
                 // Update data and cell
                 obj.options.data[y][x] = value;
                 // Label
-                if (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type == 'html') {
+                if (updateColType == 'html') {
                     obj.records[y][x].element.innerHTML = stripScript(parseValue.call(obj, x, y, value));
                 } else {
                     if (obj.parent.config.parseHTML === true) {
