@@ -3,78 +3,55 @@ import jSuites from 'jsuites';
 import libraryBase from './libraryBase.js';
 import { setEvents } from './events.js';
 import { fullscreen, getWorksheetActive } from './internal.js';
-import { hideToolbar, renameTab, showToolbar, updateToolbar } from './toolbar.js';
+import { hideToolbar, showToolbar, updateToolbar } from './toolbar.js';
 import { buildWorksheet, createWorksheetObj, getNextDefaultWorksheetName } from './worksheets.js';
 import dispatch from './dispatch.js';
 import { createFromTable } from './helpers.js';
 import { getSpreadsheetConfig, setConfig } from './config.js';
 
-const factory = function() {};
+const factory = function () {};
 
-const createWorksheets = async function(spreadsheet, options, el) {
+const createWorksheets = async function (spreadsheet, options, el) {
     // Create worksheets
     let o = options.worksheets;
     if (o) {
         let tabsOptions = {
             animation: true,
-            onbeforecreate: function(element, title) {
+            onbeforecreate: function (element, title) {
                 if (title) {
                     return title;
                 } else {
                     return getNextDefaultWorksheetName(spreadsheet);
                 }
             },
-            oncreate: function(element, newTabContent) {
-
-                let worksheetName = element.tabs.headers.children[element.tabs.headers.children.length - 2].innerHTML;
-
+            oncreate: function (element, newTabContent) {
                 if (!spreadsheet.creationThroughJss) {
+                    const worksheetName = element.tabs.headers.children[element.tabs.headers.children.length - 2].innerHTML;
 
-                    let currentOption;
-
-                    if(typeof options.onbeforecreateworksheet === "function")
-
-                        currentOption = options.onbeforecreateworksheet(options, options.worksheets.length);
-
-                    else
-
-                        currentOption = {
-                            minDimensions: [10, 15],
-                            worksheetName: worksheetName,
-                        };
-
-                    let result = createWorksheetObj.call(
-                        spreadsheet.worksheets[0],
-                        currentOption
-                    )
-
-                    if(result.options.worksheetName)
-
-                        worksheetName = result.options.worksheetName;
-
+                    createWorksheetObj.call(spreadsheet.worksheets[0], {
+                        minDimensions: [10, 15],
+                        worksheetName: worksheetName,
+                    });
                 } else {
-
                     spreadsheet.creationThroughJss = false;
-                    
                 }
 
                 const newWorksheet = spreadsheet.worksheets[spreadsheet.worksheets.length - 1];
 
                 newWorksheet.element = newTabContent;
 
-                buildWorksheet.call(newWorksheet)
-                    .then(function() {
-                        updateToolbar(newWorksheet);
-                        dispatch.call(newWorksheet, 'oncreateworksheet', newWorksheet, options, spreadsheet.worksheets.length - 1);
-                        renameTab(newWorksheet, worksheetName);
-                    });
+                buildWorksheet.call(newWorksheet).then(function () {
+                    updateToolbar(newWorksheet);
+
+                    dispatch.call(newWorksheet, 'oncreateworksheet', newWorksheet, options, spreadsheet.worksheets.length - 1);
+                });
             },
-            onchange: function(element, instance, tabIndex) {
+            onchange: function (element, instance, tabIndex) {
                 if (spreadsheet.worksheets.length != 0 && spreadsheet.worksheets[tabIndex]) {
                     updateToolbar(spreadsheet.worksheets[tabIndex]);
                 }
-            }
-        }
+            },
+        };
 
         if (options.tabs == true) {
             tabsOptions.allowCreate = true;
@@ -93,11 +70,12 @@ const createWorksheets = async function(spreadsheet, options, el) {
 
             tabsOptions.data.push({
                 title: o[i].worksheetName,
-                content: ''
+                content: '',
             });
         }
 
         el.classList.add('jss_spreadsheet');
+        el.tabIndex = 0;
 
         const tabs = jSuites.tabs(el, tabsOptions);
 
@@ -106,11 +84,11 @@ const createWorksheets = async function(spreadsheet, options, el) {
 
         for (let i = 0; i < o.length; i++) {
             if (o[i].style) {
-                Object.entries(o[i].style).forEach(function([cellName, value]) {
+                Object.entries(o[i].style).forEach(function ([cellName, value]) {
                     if (typeof value === 'number') {
                         o[i].style[cellName] = spreadsheetStyles[value];
                     }
-                })
+                });
             }
 
             spreadsheet.worksheets.push({
@@ -129,9 +107,9 @@ const createWorksheets = async function(spreadsheet, options, el) {
     } else {
         throw new Error('JSS: worksheets are not defined');
     }
-}
+};
 
-factory.spreadsheet = async function(el, options, worksheets) {
+factory.spreadsheet = async function (el, options, worksheets) {
     if (el.tagName == 'TABLE') {
         if (!options) {
             options = {};
@@ -169,22 +147,17 @@ factory.spreadsheet = async function(el, options, worksheets) {
     spreadsheet.getConfig = getSpreadsheetConfig.bind(spreadsheet);
     spreadsheet.setConfig = setConfig.bind(spreadsheet);
 
-    spreadsheet.setPlugins = function(newPlugins) {
+    spreadsheet.setPlugins = function (newPlugins) {
         if (!spreadsheet.plugins) {
             spreadsheet.plugins = {};
         }
 
         if (typeof newPlugins == 'object') {
-            Object.entries(newPlugins).forEach(function([pluginName, plugin]) {
-                spreadsheet.plugins[pluginName] = plugin.call(
-                    libraryBase.jspreadsheet,
-                    spreadsheet,
-                    {},
-                    spreadsheet.config,
-                );
-            })
+            Object.entries(newPlugins).forEach(function ([pluginName, plugin]) {
+                spreadsheet.plugins[pluginName] = plugin.call(libraryBase.jspreadsheet, spreadsheet, {}, spreadsheet.config);
+            });
         }
-    }
+    };
 
     spreadsheet.setPlugins(options.plugins);
 
@@ -195,9 +168,9 @@ factory.spreadsheet = async function(el, options, worksheets) {
 
     // Create element
     jSuites.contextmenu(spreadsheet.contextMenu, {
-        onclick:function() {
+        onclick: function () {
             spreadsheet.contextMenu.contextmenu.close(false);
-        }
+        },
     });
 
     // Fullscreen
@@ -217,9 +190,9 @@ factory.spreadsheet = async function(el, options, worksheets) {
     el.spreadsheet = spreadsheet;
 
     return spreadsheet;
-}
+};
 
-factory.worksheet = function(spreadsheet, options, position) {
+factory.worksheet = function (spreadsheet, options, position) {
     // Worksheet object
     let w = {
         // Parent of a worksheet is always the spreadsheet
@@ -229,7 +202,7 @@ factory.worksheet = function(spreadsheet, options, position) {
     };
 
     // Create the worksheets object
-    if (typeof(position) === 'undefined') {
+    if (typeof position === 'undefined') {
         spreadsheet.worksheets.push(w);
     } else {
         spreadsheet.worksheets.splice(position, 0, w);
@@ -238,6 +211,6 @@ factory.worksheet = function(spreadsheet, options, position) {
     Object.assign(w.options, options);
 
     return w;
-}
+};
 
 export default factory;

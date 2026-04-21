@@ -1,6 +1,6 @@
-import { setHistory } from "./history.js";
-import dispatch from "./dispatch.js";
-import { getColumnName } from "./helpers.js";
+import { setHistory } from './history.js';
+import dispatch from './dispatch.js';
+import { getColumnName } from './helpers.js';
 
 /**
  * Get the column title
@@ -8,11 +8,11 @@ import { getColumnName } from "./helpers.js";
  * @param column - column number (first column is: 0)
  * @param title - new column title
  */
-export const getHeader = function(column) {
+export const getHeader = function (column) {
     const obj = this;
 
     return obj.headers[column].textContent;
-}
+};
 
 /**
  * Get the headers
@@ -30,7 +30,7 @@ export const getHeaders = function (asArray) {
     }
 
     return asArray ? title : title.join(obj.options.csvDelimiter);
-}
+};
 
 /**
  * Set the column title
@@ -38,14 +38,14 @@ export const getHeaders = function (asArray) {
  * @param column - column number (first column is: 0)
  * @param title - new column title
  */
-export const setHeader = function(column, newValue) {
+export const setHeader = function (column, newValue) {
     const obj = this;
 
     if (obj.headers[column]) {
         const oldValue = obj.headers[column].textContent;
         const onchangeheaderOldValue = (obj.options.columns && obj.options.columns[column] && obj.options.columns[column].title) || '';
 
-        if (! newValue) {
+        if (!newValue) {
             newValue = getColumnName(column);
         }
 
@@ -65,13 +65,13 @@ export const setHeader = function(column, newValue) {
             action: 'setHeader',
             column: column,
             oldValue: oldValue,
-            newValue: newValue
+            newValue: newValue,
         });
 
         // On onchange header
         dispatch.call(obj, 'onchangeheader', obj, parseInt(column), newValue, onchangeheaderOldValue);
     }
-}
+};
 
 /**
  * Set column titles
@@ -79,26 +79,22 @@ export const setHeader = function(column, newValue) {
  * @param columns - columns object with numbers as key (first column is: 0)
  * @param offset - column offset
  */
-export const setHeaders = function(columns, offset = 0) {
-    
+export const setHeaders = function (columns, offset = 0) {
     const obj = this;
 
-    if(Object.keys(columns).length > 0)
-
-        for(var key in columns){
-
-            if(typeof key === "string")
-
+    if (Object.keys(columns).length > 0) {
+        for (let key in columns) {
+            if (typeof key === 'string') {
                 key = parseInt(key);
+            }
 
-            if(typeof offset === "string")
-
+            if (typeof offset === 'string') {
                 offset = parseInt(offset);
+            }
 
-            if(typeof key === "number" && typeof offset === "number")
-
+            if (typeof key === 'number' && typeof offset === 'number') {
                 obj.setHeader(key + offset, columns[key]);
-
+            }
         }
-
-}
+    }
+};

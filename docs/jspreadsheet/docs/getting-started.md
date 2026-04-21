@@ -1,0 +1,200 @@
+title: Getting Started with Jspreadsheet CE  
+keywords: Jspreadsheet CE, Jexcel, JavaScript data grid, spreadsheets, JavaScript tables, Excel-like grids, web-based spreadsheets, data grid controls, interactive spreadsheet features  
+description: Learn how to create interactive data grids with powerful spreadsheet controls using Jspreadsheet CE.
+
+# Getting Started with Jspreadsheet CE v5
+
+## Overview
+
+Jspreadsheet CE, formerly jExcel, is a free, lightweight JavaScript spreadsheet library to help developers bring Excel-like data grids and spreadsheet features to their applications. The library enables developers to build robust data management interfaces using React, Angular or pure JavaScript.
+
+### Why Choose Jspreadsheet CE?
+
+- Create rich, interactive data grid interfaces
+- Handle complex data inputs with Excel-like functionality
+- Direct Excel compatibility: Copy and paste using standard shortcuts
+- Proven success across thousands of implementations
+- Lightweight, fast, and intuitive
+- Easy integration with third-party plugins
+- Built for collaboration and sharing
+
+## Jspreadsheet Editions
+
+### Jspreadsheet CE - Community Edition
+This page documents Jspreadsheet CE (v5), the free, open-source spreadsheet library:
+- Core spreadsheet functionality
+- Excel-like data grids
+- MIT license
+- Community support
+
+**Perfect for:**
+- Open source projects
+- Learning and prototyping
+- Basic spreadsheet needs
+- Budget-conscious projects
+
+### Upgrade to Jspreadsheet Pro
+[Jspreadsheet Pro](https://jspreadsheet.com/docs/getting-started) offers professional features not available in CE:
+- **Advanced Editors:** Dropdown with conditional logic, date/time, rich text, HTML, color pickers
+- **Enhanced Formulas:** 500+ Excel-compatible functions, cross-worksheet calculations
+- **Conditional Formatting:** Visual rules, data bars, color scales
+- **Data Validation:** Advanced rules, custom validation
+- **Multiple Worksheets:** Tabs, cross-sheet references
+- **Import/Export:** Full Excel compatibility, CSV, JSON
+- **Performance:** Optimized for large datasets
+- **Professional Support:** Dedicated support team, priority bug fixes
+- **Commercial License:** For commercial applications
+
+**[Explore Jspreadsheet Pro Features →](https://jspreadsheet.com/docs/getting-started)** | **[Compare Editions →](https://jspreadsheet.com/pricing)**
+
+### LemonadeJS Data Grid - Lightweight Alternative
+For simple data display without Excel features, [LemonadeJS Data Grid](https://lemonadejs.net/docs/plugins/data-grid) offers:
+- Lightweight (5KB)
+- Reactive data binding
+- Basic search and pagination
+- Perfect for simple CRUD interfaces
+
+**[View LemonadeJS Data Grid →](https://lemonadejs.net/docs/plugins/data-grid)**
+
+---
+
+### Feature Comparison
+
+| Feature | CE | Pro | LemonadeJS Grid |
+|---------|----|----|-----------------|
+| Formulas | Basic | ✓✓ 500+ functions | ❌ |
+| Conditional Formatting | ❌ | ✓ | ❌ |
+| Advanced Editors | Basic | ✓✓ Full suite | ❌ |
+| Multiple Worksheets | ✓ | ✓ | ❌ |
+| Excel Import/Export | Basic | ✓✓ Full | ❌ |
+| Data Validation | Basic | ✓✓ Advanced | ❌ |
+| License | MIT | Commercial | MIT |
+| Support | Community | ✓ Dedicated | Community |
+| Size | Medium | Full-featured | 5KB |
+
+---
+
+
+## Installation
+
+Choose one of the following installation options:
+
+### NPM
+
+Install jspreadsheet using NPM:
+
+```bash
+npm install jspreadsheet-ce@5.0.0-beta.3
+```
+
+### CDN
+
+Include jspreadsheet directly from JSDelivr CDN:
+
+{.ignore}
+```html
+<script src="https://cdn.jsdelivr.net/npm/jspreadsheet-ce@5.0.0-beta.3/dist/index.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspreadsheet-ce@5.0.0-beta.3/dist/jspreadsheet.min.css" type="text/css" />
+<script src="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.css" type="text/css" />
+```
+
+### Download
+
+Download and run jspreadsheet on your server or local machine:
+
+https://bossanova.uk/jspreadsheet/v5/jspreadsheet.zip
+
+
+## License
+
+This software is distributed under the MIT license.
+
+
+## Documentation
+
+### Global methods and properties
+
+| Method Description                                                                                                                       |
+|------------------------------------------------------------------------------------------------------------------------------------------|
+| Create a new spreadsheet.<br/>`jspreadsheet(element: HTMLDivElement \| HTMLTableElement, options: SpreadsheetOptions): WorksheetInstance[];`                                                     |
+| Destroy a given spreadsheet.<br/>`jspreadsheet.destroy(element: JspreadsheetInstanceElement, destroyEventHandlers?: boolean): void;`                                     |
+| Destroy all spreadsheets in all namespaces.<br/>`jspreadsheet.destroyAll(): void;`                                                              |
+| Translate Jspreadsheet components and extensions.<br/>`jspreadsheet.setDictionary(translations: Record<string, string>): void;`                                 |
+| Get a worksheet instance by name and namespace.<br/>`jspreadsheet.getWorksheetInstanceByName(worksheetName: string \| null \| undefined, namespace: string): WorksheetInstance \| Record<string, WorksheetInstance>;` |
+
+
+## Examples
+
+### Create a new data grid
+
+You can create a new data grid with spreadsheet-like controls from an HTML table element, a JS array, a CSV, a JSON file or an Excel XLSX file.  
+
+```html
+<html>
+<script src="https://bossanova.uk/jspreadsheet/v5/jspreadsheet.js"></script>
+<script src="https://jsuites.net/v5/jsuites.js"></script>
+<link rel="stylesheet" href="https://bossanova.uk/jspreadsheet/v5/jspreadsheet.css" type="text/css" />
+<link rel="stylesheet" href="https://jsuites.net/v5/jsuites.css" type="text/css" />
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons" />
+
+<div id='spreadsheet'></div>
+
+<script>
+// Create a new spreadsheet
+jspreadsheet(document.getElementById('spreadsheet'), {
+    worksheets: [{
+        minDimensions: [6,6],
+    }]
+});
+</script>
+</html>
+```
+
+### Destroying The Data Grid
+
+The following example shows how to dynamically destroy and recreate a new data grid. 
+
+```html
+<html>
+<script src="https://bossanova.uk/jspreadsheet/v5/jspreadsheet.js"></script>
+<script src="https://jsuites.net/v5/jsuites.js"></script>
+<link rel="stylesheet" href="https://bossanova.uk/jspreadsheet/v5/jspreadsheet.css" type="text/css" />
+<link rel="stylesheet" href="https://jsuites.net/v5/jsuites.css" type="text/css" />
+<link rel="canonical" href="https://bossanova.uk/jspreadsheet/docs/getting-started" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons" />
+
+<div id='jspreadsheet'></div>
+
+<p><input type='button' value='Destroy' id="btn1" /> <input type='button' value='Create' id="btn2" /></p>
+
+<script>
+// Create a new spreadsheet
+let create = function() {
+    if (document.getElementById('jspreadsheet').spreadsheet) {
+        destroy();
+    }
+
+    jspreadsheet(document.getElementById('jspreadsheet'), {
+    	worksheets: [ { minDimensions:[5,5] } ]
+    });
+}
+
+// Destroy the spreadsheet
+let destroy = function() {
+    jspreadsheet.destroy(document.getElementById('jspreadsheet'));
+}
+
+// Create the spreadsheet
+jspreadsheet(document.getElementById('jspreadsheet'), {
+    worksheets: [{
+        minDimensions: [5,5],
+    }]
+});
+
+document.getElementById("btn1").onclick = () => destroy()
+document.getElementById("btn2").onclick = () => create()
+</script>
+</html>
+```

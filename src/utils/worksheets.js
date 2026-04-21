@@ -3,14 +3,39 @@ import jSuites from 'jsuites';
 import libraryBase from './libraryBase.js';
 
 import { parseCSV } from './helpers.js';
-import { createCellHeader, deleteColumn, getColumnData, getNumberOfColumns, getWidth, hideColumn, insertColumn, moveColumn, setColumnData, setWidth, showColumn } from './columns.js';
+import {
+    createCellHeader,
+    deleteColumn,
+    getColumnData,
+    getNumberOfColumns,
+    getWidth,
+    hideColumn,
+    insertColumn,
+    moveColumn,
+    setColumnData,
+    setWidth,
+    showColumn,
+} from './columns.js';
 import { getData, getDataFromRange, getValue, getValueFromCoords, setData, setValue, setValueFromCoords } from './data.js';
 import { cutControls, scrollControls, wheelControls } from './events.js';
-import { getHighlighted, getRange, getSelected, getSelectedColumns, getSelectedRows, getSelection, isSelected, resetSelection, selectAll, updateSelectionFromCoords } from './selection.js';
+import {
+    getHighlighted,
+    getRange,
+    getSelected,
+    getSelectedColumns,
+    getSelectedRows,
+    getSelection,
+    isSelected,
+    resetSelection,
+    selectAll,
+    updateSelectionFromCoords,
+} from './selection.js';
 import { deleteRow, getHeight, getRowData, hideRow, insertRow, moveRow, setHeight, setRowData, showRow } from './rows.js';
 import { destroyMerge, getMerge, removeMerge, setMerge } from './merges.js';
 import { resetSearch, search } from './search.js';
 import { getHeader, getHeaders, setHeader, setHeaders } from './headers.js';
+import { getZoom, resetZoom, setZoom, zoomIn, zoomOut } from './zoom.js';
+import { getFooters, setFooter, setFooters } from './footer.js';
 import { getStyle, resetStyle, setStyle } from './style.js';
 import { page, quantiyOfPages, whichPage } from './pagination.js';
 import { download } from './download.js';
@@ -27,18 +52,16 @@ import { copy, paste } from './copyPaste.js';
 import { isReadOnly, setReadOnly } from './cells.js';
 import { openFilter, resetFilters } from './filter.js';
 import { redo, undo } from './history.js';
-import { getZoom, resetZoom, setZoom, zoomIn, zoomOut } from './zoom.js';
-import { getFooters, setFooter, setFooters } from './footer.js';
 
-const setWorksheetFunctions = function(worksheet) {
+const setWorksheetFunctions = function (worksheet) {
     for (let i = 0; i < worksheetPublicMethodsLength; i++) {
         const [methodName, method] = worksheetPublicMethods[i];
 
         worksheet[methodName] = method.bind(worksheet);
     }
-}
+};
 
-const createTable = function() {
+const createTable = function () {
     let obj = this;
 
     setWorksheetFunctions(obj);
@@ -55,12 +78,12 @@ const createTable = function() {
     // Create table container
     obj.content = document.createElement('div');
     obj.content.classList.add('jss_content');
-    obj.content.onscroll = function(e) {
+    obj.content.onscroll = function (e) {
         scrollControls.call(obj, e);
-    }
-    obj.content.onwheel = function(e) {
+    };
+    obj.content.onwheel = function (e) {
         wheelControls.call(obj, e);
-    }
+    };
 
     // Search
     const searchContainer = document.createElement('div');
@@ -72,9 +95,9 @@ const createTable = function() {
     obj.searchInput = document.createElement('input');
     obj.searchInput.classList.add('jss_search');
     searchLabel.appendChild(obj.searchInput);
-    obj.searchInput.onfocus = function() {
+    obj.searchInput.onfocus = function () {
         obj.resetSelection();
-    }
+    };
 
     // Pagination select option
     const paginationUpdateContainer = document.createElement('div');
@@ -82,10 +105,10 @@ const createTable = function() {
     if (obj.options.pagination > 0 && obj.options.paginationOptions && obj.options.paginationOptions.length > 0) {
         obj.paginationDropdown = document.createElement('select');
         obj.paginationDropdown.classList.add('jss_pagination_dropdown');
-        obj.paginationDropdown.onchange = function() {
+        obj.paginationDropdown.onchange = function () {
             obj.options.pagination = parseInt(this.value);
             obj.page(0);
-        }
+        };
 
         for (let i = 0; i < obj.options.paginationOptions.length; i++) {
             const temp = document.createElement('option');
@@ -115,12 +138,7 @@ const createTable = function() {
     obj.colgroupContainer.appendChild(tempCol);
 
     // Nested
-    if (
-        obj.options.nestedHeaders &&
-        obj.options.nestedHeaders.length > 0 &&
-        obj.options.nestedHeaders[0] &&
-        obj.options.nestedHeaders[0][0]
-    ) {
+    if (obj.options.nestedHeaders && obj.options.nestedHeaders.length > 0 && obj.options.nestedHeaders[0] && obj.options.nestedHeaders[0][0]) {
         for (let j = 0; j < obj.options.nestedHeaders.length; j++) {
             obj.thead.appendChild(createNestedHeader.call(obj, obj.options.nestedHeaders[j]));
         }
@@ -175,7 +193,7 @@ const createTable = function() {
     obj.table.appendChild(obj.thead);
     obj.table.appendChild(obj.tbody);
 
-    if (! obj.options.textOverflow) {
+    if (!obj.options.textOverflow) {
         obj.table.classList.add('jss_overflow');
     }
 
@@ -184,14 +202,6 @@ const createTable = function() {
     obj.corner.className = 'jss_corner';
     obj.corner.setAttribute('unselectable', 'on');
     obj.corner.setAttribute('onselectstart', 'return false');
-
-    // Spreadsheet highlight border
-    obj.highlightBorder = document.createElement('div');
-    obj.highlightBorder.classList.add("jss_border", "jss_border_main");
-
-    // Spreadsheet highlight copy
-    obj.highlightCopy = document.createElement('div');
-    obj.highlightCopy.classList.add("jss_border", "jss_border_copying");
 
     if (obj.options.selectionCopy == false) {
         obj.corner.style.display = 'none';
@@ -228,7 +238,7 @@ const createTable = function() {
     obj.pagination.appendChild(paginationPages);
 
     // Hide pagination if not in use
-    if (! obj.options.pagination) {
+    if (!obj.options.pagination) {
         obj.pagination.style.display = 'none';
     }
 
@@ -240,8 +250,6 @@ const createTable = function() {
     // Elements
     obj.content.appendChild(obj.table);
     obj.content.appendChild(obj.corner);
-    obj.content.appendChild(obj.highlightBorder);
-    obj.content.appendChild(obj.highlightCopy);
     obj.content.appendChild(obj.textarea);
 
     obj.element.appendChild(obj.content);
@@ -298,9 +306,9 @@ const createTable = function() {
         enumerable: true,
         configurable: true,
         get() {
-          return obj.getStyle();
+            return obj.getStyle();
         },
-      });
+    });
 
     if (obj.options.comments) {
         obj.setComments(obj.options.comments);
@@ -314,57 +322,18 @@ const createTable = function() {
             obj.records[cell[1]][cell[0]].element.classList.add(obj.options.classes[k[i]]);
         }
     }
-
-    // Zoom
-
-    obj.zoom = obj.options.defaultZoom
-        ? Number(obj.options.defaultZoom)
-        : (
-            obj.parent.config.defaultZoom 
-                ? Number(obj.parent.config.defaultZoom)
-                : 100
-        )
-    ;
-
-    obj.zoomStep = obj.options.zoomStep
-        ? Number(obj.options.zoomStep)
-        : (
-            obj.parent.config.zoomStep 
-                ? Number(obj.parent.config.zoomStep)
-                : 10
-        )
-    ;
-
-    obj.zoomMin = obj.options.zoomMin
-        ? Number(obj.options.zoomMin)
-        : (
-            obj.parent.config.zoomMin 
-                ? Number(obj.parent.config.zoomMin)
-                : 70
-        )
-    ;
-
-    obj.zoomMax = obj.options.zoomMax
-        ? Number(obj.options.zoomMax)
-        : (
-            obj.parent.config.zoomMax 
-                ? Number(obj.parent.config.zoomMax)
-                : 150
-        )
-    ;
-
-}
+};
 
 /**
  * Prepare the jspreadsheet table
  *
  * @Param config
  */
-const prepareTable = function() {
+const prepareTable = function () {
     const obj = this;
 
     // Lazy loading
-    if (obj.options.lazyLoading == true && (obj.options.tableOverflow != true && obj.parent.config.fullscreen != true)) {
+    if (obj.options.lazyLoading == true && obj.options.tableOverflow != true && obj.parent.config.fullscreen != true) {
         console.error('Jspreadsheet: The lazyloading only works when tableOverflow = yes or fullscreen = yes');
         obj.options.lazyLoading = false;
     }
@@ -377,7 +346,7 @@ const prepareTable = function() {
     let size = obj.options.columns.length;
     let keys;
 
-    if (obj.options.data && typeof(obj.options.data[0]) !== 'undefined') {
+    if (obj.options.data && typeof obj.options.data[0] !== 'undefined') {
         if (!Array.isArray(obj.options.data[0])) {
             // Data keys
             keys = Object.keys(obj.options.data[0]);
@@ -409,27 +378,10 @@ const prepareTable = function() {
     // Preparations
     for (let i = 0; i < size; i++) {
         // Default column description
-        if (! obj.options.columns[i]) {
-            obj.options.columns[i] = { 
-                type: this.options.defaultCellType 
-                    ? this.options.defaultCellType
-                    : (
-                        this.parent.config.defaultCellType 
-                            ? this.parent.config.defaultCellType 
-                            : "text"
-                    )
-            };
-        }else if (! this.options.columns[i].type) {
-            obj.options.columns[i].type = this.options.defaultCellType 
-                    ? this.options.defaultCellType
-                    : (
-                        this.parent.config.defaultCellType 
-                            ? this.parent.config.defaultCellType 
-                            : "text"
-                    )
-            ;
+        if (!obj.options.columns[i]) {
+            obj.options.columns[i] = {};
         }
-        if (! obj.options.columns[i].name && keys && keys[i]) {
+        if (!obj.options.columns[i].name && keys && keys[i]) {
             obj.options.columns[i].name = keys[i];
         }
 
@@ -442,7 +394,7 @@ const prepareTable = function() {
                     index: i,
                     method: 'GET',
                     dataType: 'json',
-                    success: function(data) {
+                    success: function (data) {
                         if (!obj.options.columns[this.index].source) {
                             obj.options.columns[this.index].source = [];
                         }
@@ -450,28 +402,28 @@ const prepareTable = function() {
                         for (let i = 0; i < data.length; i++) {
                             obj.options.columns[this.index].source.push(data[i]);
                         }
-                    }
+                    },
                 });
             }
         }
     }
 
     // Create the table when is ready
-    if (! multiple.length) {
+    if (!multiple.length) {
         createTable.call(obj);
     } else {
-        jSuites.ajax(multiple, function() {
+        jSuites.ajax(multiple, function () {
             createTable.call(obj);
         });
     }
-}
+};
 
-export const getNextDefaultWorksheetName = function(spreadsheet) {
+export const getNextDefaultWorksheetName = function (spreadsheet) {
     const defaultWorksheetNameRegex = /^Sheet(\d+)$/;
 
     let largestWorksheetNumber = 0;
 
-    spreadsheet.worksheets.forEach(function(worksheet) {
+    spreadsheet.worksheets.forEach(function (worksheet) {
         const regexResult = defaultWorksheetNameRegex.exec(worksheet.options.worksheetName);
         if (regexResult) {
             largestWorksheetNumber = Math.max(largestWorksheetNumber, parseInt(regexResult[1]));
@@ -479,16 +431,16 @@ export const getNextDefaultWorksheetName = function(spreadsheet) {
     });
 
     return 'Sheet' + (largestWorksheetNumber + 1);
-}
+};
 
-export const buildWorksheet = async function() {
+export const buildWorksheet = async function () {
     const obj = this;
     const el = obj.element;
 
     const spreadsheet = obj.parent;
 
     if (typeof spreadsheet.plugins === 'object') {
-        Object.entries(spreadsheet.plugins).forEach(function([, plugin]) {
+        Object.entries(spreadsheet.plugins).forEach(function ([, plugin]) {
             if (typeof plugin.beforeinit === 'function') {
                 plugin.beforeinit(obj);
             }
@@ -507,9 +459,9 @@ export const buildWorksheet = async function() {
                 url: obj.options.csv,
                 method: 'GET',
                 dataType: 'text',
-                success: function(result) {
+                success: function (result) {
                     // Convert data
-                    const newData = parseCSV(result, obj.options.csvDelimiter)
+                    const newData = parseCSV(result, obj.options.csvDelimiter);
 
                     // Headers
                     if (obj.options.csvHeaders == true && newData.length > 0) {
@@ -520,8 +472,8 @@ export const buildWorksheet = async function() {
                                 obj.options.columns = [];
                             }
 
-                            for(let i = 0; i < headers.length; i++) {
-                                if (! obj.options.columns[i]) {
+                            for (let i = 0; i < headers.length; i++) {
+                                if (!obj.options.columns[i]) {
                                     obj.options.columns[i] = {};
                                 }
                                 // Precedence over pre-configurated titles
@@ -537,7 +489,7 @@ export const buildWorksheet = async function() {
                     prepareTable.call(obj);
 
                     resolve();
-                }
+                },
             });
         });
 
@@ -548,16 +500,16 @@ export const buildWorksheet = async function() {
                 url: obj.options.url,
                 method: 'GET',
                 dataType: 'json',
-                success: function(result) {
+                success: function (result) {
                     // Data
-                    obj.options.data = (result.data) ? result.data : result;
+                    obj.options.data = result.data ? result.data : result;
                     // Prepare table
                     prepareTable.call(obj);
 
                     resolve();
-                }
+                },
             });
-        })
+        });
 
         promises.push(promise);
     } else {
@@ -568,18 +520,15 @@ export const buildWorksheet = async function() {
     await Promise.all(promises);
 
     if (typeof spreadsheet.plugins === 'object') {
-        Object.entries(spreadsheet.plugins).forEach(function([, plugin]) {
+        Object.entries(spreadsheet.plugins).forEach(function ([, plugin]) {
             if (typeof plugin.init === 'function') {
                 plugin.init(obj);
             }
         });
     }
+};
 
-    this.setZoom(this.getZoom());
-
-}
-
-export const createWorksheetObj = function(options) {
+export const createWorksheetObj = function (options) {
     const obj = this;
 
     const spreadsheet = obj.parent;
@@ -602,37 +551,35 @@ export const createWorksheetObj = function(options) {
     spreadsheet.worksheets.push(newWorksheet);
 
     return newWorksheet;
-}
+};
 
-export const createWorksheet = function(options) {
+export const createWorksheet = function (options) {
     const obj = this;
     const spreadsheet = obj.parent;
     const optionLegacy = options;
 
     spreadsheet.creationThroughJss = true;
 
-    if(typeof this.parent.config.onbeforecreateworksheet === "function"){
-
+    if (typeof this.parent.config.onbeforecreateworksheet === 'function') {
         options = {
             ...this.parent.config.onbeforecreateworksheet(obj.parent, obj.parent.worksheets.length),
-            ...optionLegacy
-        }
-
+            ...optionLegacy,
+        };
     }
 
     createWorksheetObj.call(obj, options);
 
     spreadsheet.element.tabs.create(options.worksheetName);
-}
+};
 
-export const openWorksheet = function(position) {
+export const openWorksheet = function (position) {
     const obj = this;
     const spreadsheet = obj.parent;
 
     spreadsheet.element.tabs.open(position);
-}
+};
 
-export const deleteWorksheet = function(position) {
+export const deleteWorksheet = function (position) {
     const obj = this;
 
     obj.parent.element.tabs.remove(position);
@@ -640,16 +587,22 @@ export const deleteWorksheet = function(position) {
     const removedWorksheet = obj.parent.worksheets.splice(position, 1)[0];
 
     dispatch.call(obj.parent, 'ondeleteworksheet', removedWorksheet, position);
-}
+};
 
 const worksheetPublicMethods = [
     ['selectAll', selectAll],
-    ['updateSelectionFromCoords', function(x1, y1, x2, y2) {
-        return updateSelectionFromCoords.call(this, x1, y1, x2, y2);
-    }],
-    ['resetSelection', function() {
-        return resetSelection.call(this);
-    }],
+    [
+        'updateSelectionFromCoords',
+        function (x1, y1, x2, y2) {
+            return updateSelectionFromCoords.call(this, x1, y1, x2, y2);
+        },
+    ],
+    [
+        'resetSelection',
+        function () {
+            return resetSelection.call(this);
+        },
+    ],
     ['getSelection', getSelection],
     ['getSelected', getSelected],
     ['getSelectedColumns', getSelectedColumns],
@@ -661,42 +614,71 @@ const worksheetPublicMethods = [
     ['setValue', setValue],
     ['setValueFromCoords', setValueFromCoords],
     ['getWidth', getWidth],
-    ['setWidth', function(column, width) {
-        return setWidth.call(this, column, width);
-    }],
+    [
+        'setWidth',
+        function (column, width) {
+            return setWidth.call(this, column, width);
+        },
+    ],
     ['insertRow', insertRow],
-    ['moveRow', function(rowNumber, newPositionNumber) {
-        return moveRow.call(this, rowNumber, newPositionNumber);
-    }],
+    [
+        'moveRow',
+        function (rowNumber, newPositionNumber) {
+            return moveRow.call(this, rowNumber, newPositionNumber);
+        },
+    ],
     ['deleteRow', deleteRow],
     ['hideRow', hideRow],
     ['showRow', showRow],
     ['getRowData', getRowData],
     ['setRowData', setRowData],
     ['getHeight', getHeight],
-    ['setHeight', function(row, height) {
-        return setHeight.call(this, row, height);
-    }],
+    [
+        'setHeight',
+        function (row, height) {
+            return setHeight.call(this, row, height);
+        },
+    ],
     ['getMerge', getMerge],
-    ['setMerge', function(cellName, colspan, rowspan) {
-        return setMerge.call(this, cellName, colspan, rowspan);
-    }],
-    ['destroyMerge', function() {
-        return destroyMerge.call(this);
-    }],
-    ['removeMerge', function(cellName, data) {
-        return removeMerge.call(this, cellName, data);
-    }],
+    [
+        'setMerge',
+        function (cellName, colspan, rowspan) {
+            return setMerge.call(this, cellName, colspan, rowspan);
+        },
+    ],
+    [
+        'destroyMerge',
+        function () {
+            return destroyMerge.call(this);
+        },
+    ],
+    [
+        'removeMerge',
+        function (cellName, data) {
+            return removeMerge.call(this, cellName, data);
+        },
+    ],
     ['search', search],
     ['resetSearch', resetSearch],
     ['getHeader', getHeader],
     ['getHeaders', getHeaders],
     ['setHeader', setHeader],
     ['setHeaders', setHeaders],
+    ['setFooter', setFooter],
+    ['setFooters', setFooters],
+    ['getFooters', getFooters],
+    ['getZoom', getZoom],
+    ['setZoom', setZoom],
+    ['resetZoom', resetZoom],
+    ['zoomIn', zoomIn],
+    ['zoomOut', zoomOut],
     ['getStyle', getStyle],
-    ['setStyle', function(cell, property, value, forceOverwrite) {
-        return setStyle.call(this, cell, property, value, forceOverwrite);
-    }],
+    [
+        'setStyle',
+        function (cell, property, value, forceOverwrite) {
+            return setStyle.call(this, cell, property, value, forceOverwrite);
+        },
+    ],
     ['resetStyle', resetStyle],
     ['insertColumn', insertColumn],
     ['moveColumn', moveColumn],
@@ -716,9 +698,12 @@ const worksheetPublicMethods = [
     ['getLabel', getLabel],
     ['getConfig', getWorksheetConfig],
     ['setConfig', setConfig],
-    ['getMeta', function(cell) {
-        return getMeta.call(this, cell);
-    }],
+    [
+        'getMeta',
+        function (cell) {
+            return getMeta.call(this, cell);
+        },
+    ],
     ['setMeta', setMeta],
     ['showColumn', showColumn],
     ['hideColumn', hideColumn],
@@ -730,13 +715,16 @@ const worksheetPublicMethods = [
     ['createWorksheet', createWorksheet],
     ['openWorksheet', openWorksheet],
     ['deleteWorksheet', deleteWorksheet],
-    ['copy', function(cut) {
-        if (cut) {
-            cutControls();
-        } else {
-            copy.call(this, true);
-        }
-    }],
+    [
+        'copy',
+        function (cut) {
+            if (cut) {
+                cutControls();
+            } else {
+                copy.call(this, true);
+            }
+        },
+    ],
     ['paste', paste],
     ['executeFormula', executeFormula],
     ['getDataFromRange', getDataFromRange],
@@ -755,13 +743,6 @@ const worksheetPublicMethods = [
     ['up', up],
     ['openFilter', openFilter],
     ['resetFilters', resetFilters],
-    ['getZoom', getZoom],
-    ['setZoom', setZoom],
-    ['zoomIn', zoomIn],
-    ['zoomOut', zoomOut],
-    ['resetZoom', resetZoom],
-    ['getFooters', getFooters],
-    ['setFooter', setFooters],
 ];
 
 const worksheetPublicMethodsLength = worksheetPublicMethods.length;

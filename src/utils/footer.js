@@ -1,6 +1,6 @@
-import { parseValue } from "./internal.js";
+import { parseValue } from './internal.js';
 
-export const setFooter = function(data) {
+export const setFooter = function (data) {
     const obj = this;
 
     if (data) {
@@ -8,7 +8,7 @@ export const setFooter = function(data) {
     }
 
     if (obj.options.footers) {
-        if (! obj.tfoot) {
+        if (!obj.tfoot) {
             obj.tfoot = document.createElement('tfoot');
             obj.table.appendChild(obj.tfoot);
         }
@@ -25,14 +25,14 @@ export const setFooter = function(data) {
                 obj.tfoot.appendChild(tr);
             }
             for (let i = 0; i < obj.headers.length; i++) {
-                if (! obj.options.footers[j][i]) {
+                if (!obj.options.footers[j][i]) {
                     obj.options.footers[j][i] = '';
                 }
 
                 let td;
 
-                if (obj.tfoot.children[j].children[i+1]) {
-                    td = obj.tfoot.children[j].children[i+1];
+                if (obj.tfoot.children[j].children[i + 1]) {
+                    td = obj.tfoot.children[j].children[i + 1];
                 } else {
                     td = document.createElement('td');
                     tr.appendChild(td);
@@ -48,72 +48,56 @@ export const setFooter = function(data) {
             }
         }
     }
-}
+};
 
-export const setFooters = function(data) {
-    
+export const setFooters = function (data) {
     const obj = this;
 
-    const footerLength = Array.isArray(obj.options.footers) 
-        ? (
-            data 
-                ? (
-                    obj.options.footers.length > data.length 
-                        ? obj.options.footers.length
-                        : data.length
-                )
-                : obj.options.footers.length
-        )
-        : data.length
-    ;
+    const footerLength = Array.isArray(obj.options.footers)
+        ? data
+            ? obj.options.footers.length > data.length
+                ? obj.options.footers.length
+                : data.length
+            : obj.options.footers.length
+        : data.length;
 
     if (data) {
         obj.options.footers = data;
     }
 
     if (obj.options.footers) {
-        if (! obj.tfoot) {
+        if (!obj.tfoot) {
             obj.tfoot = document.createElement('tfoot');
             obj.table.appendChild(obj.tfoot);
         }
 
-        // for (let j = 0; j < obj.options.footers.length; j++) {
         for (let j = 0; j < footerLength; j++) {
-
             let tr;
 
             if (obj.tfoot.children[j]) {
-
                 // Check if tr to delete
-                if((data.length - 1) < j){
-
-                    // Delete rfoot
+                if (data.length - 1 < j) {
                     obj.tfoot.children[j].remove();
-
-                    // Continue iteration
                     continue;
-
-                }else{
-
+                } else {
                     tr = obj.tfoot.children[j];
-
                 }
-
             } else {
                 tr = document.createElement('tr');
                 const td = document.createElement('td');
                 tr.appendChild(td);
                 obj.tfoot.appendChild(tr);
             }
+
             for (let i = 0; i < obj.headers.length; i++) {
-                if (! obj.options.footers[j][i]) {
+                if (!obj.options.footers[j][i]) {
                     obj.options.footers[j][i] = '';
                 }
 
                 let td;
 
-                if (obj.tfoot.children[j].children[i+1]) {
-                    td = obj.tfoot.children[j].children[i+1];
+                if (obj.tfoot.children[j].children[i + 1]) {
+                    td = obj.tfoot.children[j].children[i + 1];
                 } else {
                     td = document.createElement('td');
                     tr.appendChild(td);
@@ -129,45 +113,31 @@ export const setFooters = function(data) {
             }
         }
     }
-}
+};
 
-export const getFooters = function(data) {
+export const getFooters = function () {
+    const result = [];
 
-    // Set result
-    let result = [];
+    const footerEls = this.element.querySelectorAll('tfoot tr');
 
-    // Get footer td
-    let footerEls = this.element.querySelectorAll("tfoot tr");
+    if (footerEls.length) {
+        for (const footerEl of footerEls) {
+            if (footerEl) {
+                const tdEls = footerEl.querySelectorAll('td');
+                let i = 0;
+                const row = {};
 
-    // Iterations footers el
-    if(footerEls.length) for(let footerEl of footerEls) if(footerEl){
+                for (const tdEl of tdEls) {
+                    if (tdEl) {
+                        row[i] = tdEl.innerText ? tdEl.innerText : '';
+                        i++;
+                    }
+                }
 
-        // Get all td
-        let tdEls = footerEl.querySelectorAll("td");
-
-        // Set index
-        let i = 0;
-
-        // Row
-        let row = {};
-
-        // Iteration td els
-        if(tdEls.length) for(let tdEl of tdEls) if(tdEl) {
-
-            // Push to row
-            row[i] = tdEl.innerText ? tdEl.innerText : '';
-
-            // Increment i
-            i++;
-
+                result.push(row);
+            }
         }
-
-        // Push row into result
-        result.push(row);
-
     }
 
-    // Return result
     return result;
-
-}
+};
