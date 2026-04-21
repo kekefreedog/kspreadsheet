@@ -203,6 +203,14 @@ const createTable = function () {
     obj.corner.setAttribute('unselectable', 'on');
     obj.corner.setAttribute('onselectstart', 'return false');
 
+    // Spreadsheet highlight border
+    obj.highlightBorder = document.createElement('div');
+    obj.highlightBorder.classList.add('jss_border', 'jss_border_main');
+
+    // Spreadsheet highlight copy
+    obj.highlightCopy = document.createElement('div');
+    obj.highlightCopy.classList.add('jss_border', 'jss_border_copying');
+
     if (obj.options.selectionCopy == false) {
         obj.corner.style.display = 'none';
     }
@@ -250,6 +258,8 @@ const createTable = function () {
     // Elements
     obj.content.appendChild(obj.table);
     obj.content.appendChild(obj.corner);
+    obj.content.appendChild(obj.highlightBorder);
+    obj.content.appendChild(obj.highlightCopy);
     obj.content.appendChild(obj.textarea);
 
     obj.element.appendChild(obj.content);
