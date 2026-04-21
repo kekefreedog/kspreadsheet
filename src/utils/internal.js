@@ -2,7 +2,7 @@ import jSuites from 'jsuites';
 import formula from '@jspreadsheet/formula';
 
 import dispatch from './dispatch.js';
-import { refreshSelection, updateCornerPosition } from './selection.js';
+import { refreshSelection, updateCornerPosition, updateHighlightBorder, updateHighlightCopy } from './selection.js';
 import { getColumnName } from './helpers.js';
 import { updateMeta } from './meta.js';
 import { getFreezeWidth } from './freeze.js';
@@ -65,9 +65,11 @@ export const updateTable = function () {
         obj.options.minDimensions[0] = obj.options.columns.length;
     }
 
-    // Update corner position
+    // Update corner position and selection overlay
     setTimeout(function () {
+        updateHighlightBorder.call(obj);
         updateCornerPosition.call(obj);
+        updateHighlightCopy.call(obj);
     }, 0);
 };
 
@@ -1121,7 +1123,9 @@ export const updateResult = function () {
         updatePagination.call(obj);
     }
 
+    updateHighlightBorder.call(obj);
     updateCornerPosition.call(obj);
+    updateHighlightCopy.call(obj);
 
     dispatch.call(obj, 'onupdateresult', obj, obj.results);
 

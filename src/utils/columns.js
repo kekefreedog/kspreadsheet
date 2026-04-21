@@ -629,8 +629,10 @@ export const setWidth = function (column, width, oldWidth) {
         // On resize column
         dispatch.call(obj, 'onresizecolumn', obj, column, width, oldWidth);
 
-        // Update corner position
+        // Update corner position and selection overlay
+        updateHighlightBorder.call(obj);
         updateCornerPosition.call(obj);
+        updateHighlightCopy.call(obj);
     }
 };
 
