@@ -453,6 +453,9 @@ export const removeCopySelection = function () {
         obj.selection[i].classList.remove('selection-bottom');
     }
 
+    obj.highlightCopy.style.top = '-2000px';
+    obj.highlightCopy.style.left = '-2000px';
+
     obj.selection = [];
 };
 
