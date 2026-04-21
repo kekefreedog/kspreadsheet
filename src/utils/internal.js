@@ -539,6 +539,11 @@ export const updateCell = function (x, y, value, force) {
 
     let record;
 
+    // Guard: skip if cell doesn't exist in the grid
+    if (!obj.records[y] || !obj.records[y][x]) {
+        return { x, y, col: x, row: y };
+    }
+
     // Changing value depending on the column type
     if (obj.records[y][x].element.classList.contains('readonly') == true && !force) {
         // Do nothing

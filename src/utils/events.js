@@ -4,7 +4,16 @@ import { closeEditor, openEditor, setCheckRadioValue } from './editor.js';
 import libraryBase from './libraryBase.js';
 import { down, first, last, left, right, up } from './keys.js';
 import { isColMerged, isRowMerged } from './merges.js';
-import { copyData, removeCopySelection, resetSelection, selectAll, updateCornerPosition, updateHighlightBorder, updateHighlightCopy, updateSelectionFromCoords } from './selection.js';
+import {
+    copyData,
+    removeCopySelection,
+    resetSelection,
+    selectAll,
+    updateCornerPosition,
+    updateHighlightBorder,
+    updateHighlightCopy,
+    updateSelectionFromCoords,
+} from './selection.js';
 import { copy, paste } from './copyPaste.js';
 import { openFilter } from './filter.js';
 import { loadDown, loadUp } from './lazyLoading.js';
@@ -1566,14 +1575,13 @@ const updateFreezePosition = function () {
                 if (i > 0) {
                     // Must check if the previous column is hidden or not
                     if (!obj.options.columns || !obj.options.columns[i - 1] || obj.options.columns[i - 1].type !== 'hidden') {
-                        let columnWidth;
-                        if (obj.options.columns && obj.options.columns[i - 1] && obj.options.columns[i - 1].width !== undefined) {
-                            columnWidth = parseInt(obj.options.columns[i - 1].width);
-                        } else {
-                            columnWidth = obj.options.defaultColWidth !== undefined ? parseInt(obj.options.defaultColWidth) : 100;
-                        }
-
-                        width += parseInt(columnWidth);
+                        const columnWidth =
+                            obj.options.columns && obj.options.columns[i - 1] && obj.options.columns[i - 1].width !== undefined
+                                ? parseInt(obj.options.columns[i - 1].width)
+                                : obj.options.defaultColWidth !== undefined
+                                ? parseInt(obj.options.defaultColWidth)
+                                : 100;
+                        width += columnWidth;
                     }
                 }
                 obj.headers[i].classList.add('jss_freezed');
@@ -1584,9 +1592,11 @@ const updateFreezePosition = function () {
                 }
                 for (let j = 0; j < obj.rows.length; j++) {
                     if (obj.rows[j] && obj.records[j][i]) {
-                        const shifted = (scrollLeft + (i > 0 ? obj.records[j][i - 1].element.style.width : 0)) - (indexColWidth + 1) * (obj.zoom / 100);
+                        const zoom = obj.zoom || 100;
+                        const prevWidth = i > 0 ? parseInt(obj.records[j][i - 1].element.style.width) || 0 : 0;
+                        const shifted = scrollLeft + prevWidth - (indexColWidth + 1) * (zoom / 100);
                         obj.records[j][i].element.classList.add('jss_freezed');
-                        obj.records[j][i].element.style.left = `${Math.round(shifted / (obj.zoom / 100))}px`;
+                        obj.records[j][i].element.style.left = `${Math.round(shifted / (zoom / 100))}px`;
                     }
                 }
             }
@@ -1594,21 +1604,29 @@ const updateFreezePosition = function () {
             if (Array.isArray(obj.options.nestedHeaders) && obj.options.nestedHeaders.length) {
                 for (const nestedParent of obj.options.nestedHeaders) {
                     if (Array.isArray(nestedParent) && nestedParent.length) {
-                        const nestedEl =
-                            'element' in nestedParent && nestedParent.element instanceof HTMLTableRowElement ? nestedParent.element : null;
+                        const nestedEl = 'element' in nestedParent && nestedParent.element instanceof HTMLTableRowElement ? nestedParent.element : null;
+                        if (!nestedEl) continue;
+                        let colIndex = 0;
+                        let ni = 1;
+                        let currentWidth = 0;
                         for (const nested of nestedParent) {
-                            let ni = 1;
-                            if ('colspan' in nested && typeof parseInt(nested.colspan) === 'number' && parseInt(nested.colspan) > 0) {
-                                let index = obj.options.freezeColumns;
-                                let currentWidth = 0;
-                                do {
-                                    nestedEl.children[ni].classList.add('jss_freezed');
-                                    nestedEl.children[ni].style.left = `${currentWidth}px`;
-                                    currentWidth += nestedEl.children[ni].offsetWidth;
-                                    index -= parseInt(nested.colspan);
-                                    ni++;
-                                } while (index > 0);
+                            const colspan = parseInt(nested.colspan) || 1;
+                            if (colIndex >= obj.options.freezeColumns) break;
+                            nestedEl.children[ni].classList.add('jss_freezed');
+                            nestedEl.children[ni].style.left = `${currentWidth}px`;
+                            for (let ci = colIndex; ci < colIndex + colspan && ci < obj.options.freezeColumns; ci++) {
+                                if (!obj.options.columns || !obj.options.columns[ci] || obj.options.columns[ci].type !== 'hidden') {
+                                    const colW =
+                                        obj.options.columns && obj.options.columns[ci] && obj.options.columns[ci].width !== undefined
+                                            ? parseInt(obj.options.columns[ci].width)
+                                            : obj.options.defaultColWidth !== undefined
+                                            ? parseInt(obj.options.defaultColWidth)
+                                            : 100;
+                                    currentWidth += colW;
+                                }
                             }
+                            colIndex += colspan;
+                            ni++;
                         }
                     }
                 }
@@ -1628,19 +1646,17 @@ const updateFreezePosition = function () {
             if (Array.isArray(obj.options.nestedHeaders) && obj.options.nestedHeaders.length) {
                 for (const nestedParent of obj.options.nestedHeaders) {
                     if (Array.isArray(nestedParent) && nestedParent.length) {
-                        const nestedEl =
-                            'element' in nestedParent && nestedParent.element instanceof HTMLTableRowElement ? nestedParent.element : null;
+                        const nestedEl = 'element' in nestedParent && nestedParent.element instanceof HTMLTableRowElement ? nestedParent.element : null;
+                        if (!nestedEl) continue;
+                        let colIndex = 0;
+                        let ni = 1;
                         for (const nested of nestedParent) {
-                            if ('colspan' in nested && typeof nested.colspan === 'number' && nested.colspan && nestedEl) {
-                                let ni = 1;
-                                let index = obj.options.freezeColumns;
-                                do {
-                                    nestedEl.children[ni].classList.remove('jss_freezed');
-                                    nestedEl.children[ni].style.removeProperty('left');
-                                    index -= nested.colspan;
-                                    ni++;
-                                } while (index > 0);
-                            }
+                            const colspan = parseInt(nested.colspan) || 1;
+                            if (colIndex >= obj.options.freezeColumns) break;
+                            nestedEl.children[ni].classList.remove('jss_freezed');
+                            nestedEl.children[ni].style.removeProperty('left');
+                            colIndex += colspan;
+                            ni++;
                         }
                     }
                 }

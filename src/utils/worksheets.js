@@ -302,6 +302,15 @@ const createTable = function () {
         obj.tbody.classList.add('resizable');
     }
 
+    // Initialize zoom
+    obj.zoomMin = 25;
+    obj.zoomMax = 400;
+    obj.zoomStep = 10;
+    obj.zoom = 100;
+    if (obj.options.defaultZoom || obj.parent.config.defaultZoom) {
+        obj.resetZoom();
+    }
+
     // Load data
     obj.setData.call(obj);
 

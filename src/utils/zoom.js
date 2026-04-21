@@ -4,44 +4,39 @@
  * @param object cell
  * @return void
  */
-export const getZoom = function() {
-
+export const getZoom = function () {
     return this.zoom;
-
-}
+};
 
 /**
  * Reset Zoom
  *
  * @return void
  */
-export const resetZoom = function() {
-
-    this.zoom = this.options.defaultZoom
-        ? Number(this.options.defaultZoom)
-        : (
-            this.parent.config.defaultZoom 
-                ? Number(this.parent.config.defaultZoom)
-                : 100
-        )
-    ;
+export const resetZoom = function () {
+    this.zoom = this.options.defaultZoom ? Number(this.options.defaultZoom) : this.parent.config.defaultZoom ? Number(this.parent.config.defaultZoom) : 100;
 
     this.setZoom(this.zoom);
-
-}
+};
 
 /**
  * Set Zoom
- * 
+ *
  * @param zoomValue
  * @return void
  */
-export const setZoom = function(zoomValue) {
+export const setZoom = function (zoomValue) {
+    if (zoomValue >= this.zoomMin && zoomValue <= this.zoomMax) {
+        const updateOverlays = () => {
+            if (this.highlightBorder) {
+                import('./selection.js').then(({ updateHighlightBorder, updateHighlightCopy }) => {
+                    updateHighlightBorder.call(this);
+                    updateHighlightCopy.call(this);
+                });
+            }
+        };
 
-    if(zoomValue >= this.zoomMin && zoomValue <= this.zoomMax){
-
-        if("parentElement" in this.table && this.table.parentElement && this.options.tableOverflow === true){
-
+        if ('parentElement' in this.table && this.table.parentElement && this.options.tableOverflow === true) {
             // Get the current scroll and size properties
             const oldScrollWidth = this.table.parentElement.scrollWidth;
             const oldScrollHeight = this.table.parentElement.scrollHeight;
@@ -70,45 +65,42 @@ export const setZoom = function(zoomValue) {
                 // Apply the new scroll positions
                 this.table.parentElement.scrollLeft = newScrollLeft;
                 this.table.parentElement.scrollTop = newScrollTop;
+
+                updateOverlays();
             }, 0); // 0ms delay ensures it waits for rendering updates
-
-        }else{
-
+        } else {
             this.zoom = zoomValue;
 
             // Apply zoom by updating CSS
             this.table.style.zoom = this.zoom / 100;
 
+            setTimeout(() => {
+                updateOverlays();
+            }, 0);
         }
-
     }
 
     return this.zoom;
-
-}
+};
 
 /**
  * Zoom In
- * 
+ *
  * @return void
  */
-export const zoomIn = function() {
-
+export const zoomIn = function () {
     var zoomValue = this.getZoom() + this.zoomStep;
 
     return this.setZoom(zoomValue);
-
-}
+};
 
 /**
  * Zoom Out
- * 
+ *
  * @return void
  */
-export const zoomOut = function() {
-
+export const zoomOut = function () {
     var zoomValue = this.getZoom() - this.zoomStep;
 
     return this.setZoom(zoomValue);
-
-}
+};

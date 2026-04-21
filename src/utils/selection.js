@@ -144,6 +144,38 @@ export const updateSelection = function (el1, el2, origin) {
     updateSelectionFromCoords.call(obj, x1, y1, x2, y2, origin);
 };
 
+/**
+ * Convert a getBoundingClientRect() measurement to content-div coordinates.
+ * Uses getBoundingClientRect() so it is always zoom-aware.
+ */
+const rectToContentCoords = function (obj, firstRect, lastRect) {
+    const contentRect = obj.content.getBoundingClientRect();
+    const scrollLeft = obj.content.scrollLeft;
+    const scrollTop = obj.content.scrollTop;
+    const top = Math.round(firstRect.top - contentRect.top + scrollTop);
+    const left = Math.round(firstRect.left - contentRect.left + scrollLeft);
+    const width = Math.round(lastRect.right - firstRect.left);
+    const height = Math.round(lastRect.bottom - firstRect.top);
+    return { top, left, width, height };
+};
+
+/**
+ * Compute the right edge of the frozen columns in content-div coordinates.
+ * Uses the actual frozen header element so it is zoom-aware.
+ * Returns 0 if freeze is not active.
+ */
+const getFrozenClipLeft = function (obj) {
+    if (!obj.options.freezeColumns) return 0;
+    const scrollLeft = obj.content.scrollLeft;
+    const indexColWidth = obj.table.querySelector('.jss_selectall')?.offsetWidth || 0;
+    if (scrollLeft <= indexColWidth) return 0;
+    const lastFrozenHeader = obj.headers[obj.options.freezeColumns - 1];
+    if (!lastFrozenHeader) return 0;
+    const contentRect = obj.content.getBoundingClientRect();
+    const headerRect = lastFrozenHeader.getBoundingClientRect();
+    return Math.round(headerRect.right - contentRect.left + scrollLeft);
+};
+
 export const updateHighlightBorder = function () {
     const obj = this;
 
@@ -154,14 +186,27 @@ export const updateHighlightBorder = function () {
         } else {
             const first = obj.highlighted.at(0).element;
             const last = obj.highlighted.at(-1).element;
-            const top = first.offsetTop;
-            const left = first.offsetLeft;
-            const width = last.offsetLeft + last.offsetWidth - first.offsetLeft;
-            const height = last.offsetTop + last.offsetHeight - first.offsetTop;
-            obj.highlightBorder.style.top = `${top}px`;
-            obj.highlightBorder.style.left = `${left}px`;
-            obj.highlightBorder.style.width = `${width}px`;
-            obj.highlightBorder.style.height = `${height}px`;
+            const coords = rectToContentCoords(obj, first.getBoundingClientRect(), last.getBoundingClientRect());
+            const { top, height } = coords;
+            let { left, width } = coords;
+
+            // Clip selection overlay to not overlap frozen columns
+            // (frozen cells already show selection via legacy CSS borders)
+            const clipLeft = getFrozenClipLeft(obj);
+            if (clipLeft > 0 && left < clipLeft) {
+                width = Math.max(0, width - (clipLeft - left));
+                left = clipLeft;
+            }
+
+            if (width <= 0) {
+                obj.highlightBorder.style.top = '-2000px';
+                obj.highlightBorder.style.left = '-2000px';
+            } else {
+                obj.highlightBorder.style.top = `${top}px`;
+                obj.highlightBorder.style.left = `${left}px`;
+                obj.highlightBorder.style.width = `${width}px`;
+                obj.highlightBorder.style.height = `${height}px`;
+            }
         }
     }
 };
@@ -178,14 +223,26 @@ export const updateHighlightCopy = function () {
         const copySelectionArray = Array.from(copySelectionEls);
         const first = copySelectionArray.at(0);
         const last = copySelectionArray.at(-1);
-        const top = first.offsetTop;
-        const left = first.offsetLeft;
-        const width = last.offsetLeft + last.offsetWidth - first.offsetLeft;
-        const height = last.offsetTop + last.offsetHeight - first.offsetTop;
-        obj.highlightCopy.style.top = `${top}px`;
-        obj.highlightCopy.style.left = `${left}px`;
-        obj.highlightCopy.style.width = `${width}px`;
-        obj.highlightCopy.style.height = `${height}px`;
+        const coords = rectToContentCoords(obj, first.getBoundingClientRect(), last.getBoundingClientRect());
+        const { top, height } = coords;
+        let { left, width } = coords;
+
+        // Clip copy overlay to not overlap frozen columns
+        const clipLeft = getFrozenClipLeft(obj);
+        if (clipLeft > 0 && left < clipLeft) {
+            width = Math.max(0, width - (clipLeft - left));
+            left = clipLeft;
+        }
+
+        if (width <= 0) {
+            obj.highlightCopy.style.top = '-2000px';
+            obj.highlightCopy.style.left = '-2000px';
+        } else {
+            obj.highlightCopy.style.top = `${top}px`;
+            obj.highlightCopy.style.left = `${left}px`;
+            obj.highlightCopy.style.width = `${width}px`;
+            obj.highlightCopy.style.height = `${height}px`;
+        }
     }
 };
 

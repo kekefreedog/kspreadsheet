@@ -5,12 +5,17 @@ import 'jsuites/dist/jsuites.css';
 
 window.jss = jspreadsheet;
 
-window.instance = jspreadsheet(document.getElementById('root'), {
-    tabs: true,
-    toolbar: true,
+window.instance = jspreadsheet(root, {
     worksheets: [
         {
-            minDimensions: [6, 6],
-        },
+            minDimensions: [200,200],
+            tableOverflow: true,
+            lazyLoading: true,
+            tableWidth: '1000px',
+            freezeColumns: 2,
+            filters: true,
+        }
     ],
-});
+})
+
+let worksheets = window.instance;
