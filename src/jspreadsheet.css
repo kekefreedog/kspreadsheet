@@ -627,20 +627,38 @@
     zoom: 0.55;
 }
 
+/* Legacy copy borders disabled — jss_border_copying div overlay handles the animated dashed border */
 .jss_worksheet .copying-top {
-    border-top: 1px dashed #000;
+    /* border-top: 1px dashed #000; */
 }
 
 .jss_worksheet .copying-left {
-    border-left: 1px dashed #000;
+    /* border-left: 1px dashed #000; */
 }
 
 .jss_worksheet .copying-right {
-    border-right: 1px dashed #000;
+    /* border-right: 1px dashed #000; */
 }
 
 .jss_worksheet .copying-bottom {
-    border-bottom: 1px dashed #000;
+    /* border-bottom: 1px dashed #000; */
+}
+
+/* Frozen columns: keep legacy dashed borders since the overlay div doesn't cover them */
+.jss_worksheet .jss_freezed.copying-top {
+    border-top: 2px dashed #000;
+}
+
+.jss_worksheet .jss_freezed.copying-left {
+    border-left: 2px dashed #000;
+}
+
+.jss_worksheet .jss_freezed.copying-right {
+    border-right: 2px dashed #000;
+}
+
+.jss_worksheet .jss_freezed.copying-bottom {
+    border-bottom: 2px dashed #000;
 }
 
 .jss_worksheet .jss_column_filter {
