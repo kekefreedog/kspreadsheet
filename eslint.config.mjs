@@ -1,10 +1,12 @@
 import js from '@eslint/js';
 import globals from 'globals';
 
+const browserGlobals = Object.fromEntries(Object.entries(globals.browser).map(([k, v]) => [k.trim(), v]));
+
 export default [
     js.configs.recommended,
     {
-        ignores: ['dist/**', 'node_modules/**'],
+        ignores: ['dist/**', 'node_modules/**', 'src/backup/**'],
     },
     {
         files: ['**/*.{js,mjs,cjs}'],
@@ -12,7 +14,7 @@ export default [
             ecmaVersion: 2022,
             sourceType: 'module',
             globals: {
-                ...globals.browser,
+                ...browserGlobals,
                 ...globals.node,
                 ...globals.es2022,
                 jspreadsheet: 'readonly',
