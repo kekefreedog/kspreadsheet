@@ -478,7 +478,12 @@ const adjustToolbarSettingsForJSuites = function (toolbar) {
                             worksheet.setStyle(
                                 Object.fromEntries(
                                     cells.map(function (cellName) {
-                                        return [cellName, items[i].k + ': ' + v];
+                                        // No space after the colon: when v is '' (reset), this must
+                                        // produce an empty value (`key + ':'`), not a lone space
+                                        // (`key + ': '`) — style.js's parser would otherwise pass a
+                                        // single space as the CSS value, which the browser silently
+                                        // rejects, leaving the old color in place.
+                                        return [cellName, items[i].k + ':' + v];
                                     })
                                 )
                             );

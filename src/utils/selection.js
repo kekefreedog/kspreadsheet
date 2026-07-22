@@ -1,5 +1,5 @@
 import dispatch from './dispatch.js';
-import { getFreezeWidth } from './freeze.js';
+import { getFreezeHeight, getFreezeWidth } from './freeze.js';
 import { getCellNameFromCoords } from './helpers.js';
 import { setHistory } from './history.js';
 import { updateCell, updateFormula, updateFormulaChain, updateTable } from './internal.js';
@@ -17,6 +17,7 @@ export const updateCornerPosition = function () {
         // Get last cell
         const last = obj.highlighted[obj.highlighted.length - 1].element;
         const lastX = last.getAttribute('data-x');
+        const lastY = last.getAttribute('data-y');
 
         const contentRect = obj.content.getBoundingClientRect();
         const x1 = contentRect.left;
@@ -35,20 +36,29 @@ export const updateCornerPosition = function () {
         obj.corner.style.top = y + 'px';
         obj.corner.style.left = x + 'px';
 
+        // Hide the corner if the last selected cell is currently sitting behind the
+        // frozen columns/rows band (i.e. not actually visible where we just placed it)
+        let hiddenBehindFreeze = false;
+
         if (obj.options.freezeColumns) {
             const width = getFreezeWidth.call(obj);
             // Only check if the last column is not part of the merged cells
             if (lastX > obj.options.freezeColumns - 1 && x2 - x1 + w2 < width) {
-                obj.corner.style.display = 'none';
-            } else {
-                if (obj.options.selectionCopy != false) {
-                    obj.corner.style.display = '';
-                }
+                hiddenBehindFreeze = true;
             }
-        } else {
-            if (obj.options.selectionCopy != false) {
-                obj.corner.style.display = '';
+        }
+
+        if (!hiddenBehindFreeze && obj.options.freezeRows) {
+            const height = getFreezeHeight.call(obj);
+            if (lastY > obj.options.freezeRows - 1 && y2 - y1 + h2 < height) {
+                hiddenBehindFreeze = true;
             }
+        }
+
+        if (hiddenBehindFreeze) {
+            obj.corner.style.display = 'none';
+        } else if (obj.options.selectionCopy != false) {
+            obj.corner.style.display = '';
         }
     }
 
@@ -176,6 +186,20 @@ const getFrozenClipLeft = function (obj) {
     return Math.round(headerRect.right - contentRect.left + scrollLeft);
 };
 
+/**
+ * Compute the bottom edge of the frozen rows in content-div coordinates.
+ * Uses the actual frozen row element so it is zoom-aware.
+ * Returns 0 if row freeze is not active.
+ */
+const getFrozenClipTop = function (obj) {
+    if (!obj.options.freezeRows) return 0;
+    const lastFrozenRow = obj.rows[obj.options.freezeRows - 1];
+    if (!lastFrozenRow) return 0;
+    const contentRect = obj.content.getBoundingClientRect();
+    const rowRect = lastFrozenRow.element.getBoundingClientRect();
+    return Math.round(rowRect.bottom - contentRect.top + obj.content.scrollTop);
+};
+
 export const updateHighlightBorder = function () {
     const obj = this;
 
@@ -187,10 +211,9 @@ export const updateHighlightBorder = function () {
             const first = obj.highlighted.at(0).element;
             const last = obj.highlighted.at(-1).element;
             const coords = rectToContentCoords(obj, first.getBoundingClientRect(), last.getBoundingClientRect());
-            const { top, height } = coords;
-            let { left, width } = coords;
+            let { top, left, width, height } = coords;
 
-            // Clip selection overlay to not overlap frozen columns
+            // Clip selection overlay to not overlap frozen columns/rows
             // (frozen cells already show selection via legacy CSS borders)
             const clipLeft = getFrozenClipLeft(obj);
             if (clipLeft > 0 && left < clipLeft) {
@@ -198,7 +221,13 @@ export const updateHighlightBorder = function () {
                 left = clipLeft;
             }
 
-            if (width <= 0) {
+            const clipTop = getFrozenClipTop(obj);
+            if (clipTop > 0 && top < clipTop) {
+                height = Math.max(0, height - (clipTop - top));
+                top = clipTop;
+            }
+
+            if (width <= 0 || height <= 0) {
                 obj.highlightBorder.style.top = '-2000px';
                 obj.highlightBorder.style.left = '-2000px';
             } else {
@@ -224,17 +253,22 @@ export const updateHighlightCopy = function () {
         const first = copySelectionArray.at(0);
         const last = copySelectionArray.at(-1);
         const coords = rectToContentCoords(obj, first.getBoundingClientRect(), last.getBoundingClientRect());
-        const { top, height } = coords;
-        let { left, width } = coords;
+        let { top, left, width, height } = coords;
 
-        // Clip copy overlay to not overlap frozen columns
+        // Clip copy overlay to not overlap frozen columns/rows
         const clipLeft = getFrozenClipLeft(obj);
         if (clipLeft > 0 && left < clipLeft) {
             width = Math.max(0, width - (clipLeft - left));
             left = clipLeft;
         }
 
-        if (width <= 0) {
+        const clipTop = getFrozenClipTop(obj);
+        if (clipTop > 0 && top < clipTop) {
+            height = Math.max(0, height - (clipTop - top));
+            top = clipTop;
+        }
+
+        if (width <= 0 || height <= 0) {
             obj.highlightCopy.style.top = '-2000px';
             obj.highlightCopy.style.left = '-2000px';
         } else {
@@ -244,6 +278,52 @@ export const updateHighlightCopy = function () {
             obj.highlightCopy.style.height = `${height}px`;
         }
     }
+};
+
+/**
+ * Position the fill-handle drag preview (same marching-ants dashed style as the copy
+ * selection) over the given destination range. Takes explicit first/last cell elements
+ * since — unlike copy — the fill-drag range isn't marked with a `.copying` class, it's
+ * computed live as the mouse moves.
+ */
+export const updateHighlightFill = function (first, last) {
+    const obj = this;
+
+    if (!first || !last) {
+        hideHighlightFill.call(obj);
+        return;
+    }
+
+    const coords = rectToContentCoords(obj, first.getBoundingClientRect(), last.getBoundingClientRect());
+    let { top, left, width, height } = coords;
+
+    const clipLeft = getFrozenClipLeft(obj);
+    if (clipLeft > 0 && left < clipLeft) {
+        width = Math.max(0, width - (clipLeft - left));
+        left = clipLeft;
+    }
+
+    const clipTop = getFrozenClipTop(obj);
+    if (clipTop > 0 && top < clipTop) {
+        height = Math.max(0, height - (clipTop - top));
+        top = clipTop;
+    }
+
+    if (width <= 0 || height <= 0) {
+        hideHighlightFill.call(obj);
+    } else {
+        obj.highlightFill.style.top = `${top}px`;
+        obj.highlightFill.style.left = `${left}px`;
+        obj.highlightFill.style.width = `${width}px`;
+        obj.highlightFill.style.height = `${height}px`;
+    }
+};
+
+export const hideHighlightFill = function () {
+    const obj = this;
+
+    obj.highlightFill.style.top = '-2000px';
+    obj.highlightFill.style.left = '-2000px';
 };
 
 export const removeCopyingSelection = function () {
@@ -282,19 +362,23 @@ export const updateSelectionFromCoords = function (x1, y1, x2, y2, origin) {
         y2 = y1;
     }
 
-    // Selection must be within the existing data
-    if (x1 >= obj.headers.length) {
-        x1 = obj.headers.length - 1;
-    }
-    if (y1 >= obj.rows.length) {
-        y1 = obj.rows.length - 1;
-    }
-    if (x2 >= obj.headers.length) {
-        x2 = obj.headers.length - 1;
-    }
-    if (y2 >= obj.rows.length) {
-        y2 = obj.rows.length - 1;
-    }
+    // Selection must be within the existing data.
+    // Coordinates are clamped through parseInt + Math.max/min so that NaN or negative
+    // values (which the previous `>= length` checks alone don't catch — comparisons
+    // against NaN are always false, so an invalid value silently passed through unclamped
+    // and could later crash indexing obj.records[y1]) always resolve to a valid in-range index.
+    const clamp = (value, maxIndex) => {
+        const parsed = parseInt(value);
+        if (isNaN(parsed)) {
+            return 0;
+        }
+        return Math.max(0, Math.min(parsed, maxIndex));
+    };
+
+    x1 = clamp(x1, obj.headers.length - 1);
+    y1 = clamp(y1, obj.rows.length - 1);
+    x2 = clamp(x2, obj.headers.length - 1);
+    y2 = clamp(y2, obj.rows.length - 1);
 
     // Limits
     let borderLeft = null;
@@ -324,9 +408,12 @@ export const updateSelectionFromCoords = function (x1, y1, x2, y2, origin) {
     }
 
     // Verify merged columns
+    // (px/ux/py/uy can expand while this loop runs, below, as merged cells are found — guard
+    // obj.records[j] explicitly since a mid-loop expansion can push j/i past valid bounds
+    // before the re-clamp that runs after this loop finishes)
     for (let i = px; i <= ux; i++) {
         for (let j = py; j <= uy; j++) {
-            if (obj.records[j][i] && obj.records[j][i].element.getAttribute('data-merged')) {
+            if (obj.records[j] && obj.records[j][i] && obj.records[j][i].element.getAttribute('data-merged')) {
                 const x = parseInt(obj.records[j][i].element.getAttribute('data-x'));
                 const y = parseInt(obj.records[j][i].element.getAttribute('data-y'));
                 const colspan = parseInt(obj.records[j][i].element.getAttribute('colspan'));
@@ -353,9 +440,16 @@ export const updateSelectionFromCoords = function (x1, y1, x2, y2, origin) {
         }
     }
 
+    // A merged cell's colspan/rowspan can expand px/ux/py/uy above — re-clamp to valid
+    // bounds so the loops below never index past the end of obj.rows/obj.records.
+    px = Math.max(0, Math.min(px, obj.headers.length - 1));
+    ux = Math.max(0, Math.min(ux, obj.headers.length - 1));
+    py = Math.max(0, Math.min(py, obj.rows.length - 1));
+    uy = Math.max(0, Math.min(uy, obj.rows.length - 1));
+
     // Vertical limits
     for (let j = py; j <= uy; j++) {
-        if (obj.rows[j].element.style.display != 'none') {
+        if (obj.rows[j] && obj.rows[j].element.style.display != 'none') {
             if (borderTop == null) {
                 borderTop = j;
             }
@@ -395,14 +489,14 @@ export const updateSelectionFromCoords = function (x1, y1, x2, y2, origin) {
     obj.selectedCell = [x1, y1, x2, y2];
 
     // Add selected cell
-    if (obj.records[y1][x1]) {
+    if (obj.records[y1] && obj.records[y1][x1]) {
         obj.records[y1][x1].element.classList.add('highlight-selected');
     }
 
     // Redefining styles
     for (let i = px; i <= ux; i++) {
         for (let j = py; j <= uy; j++) {
-            if (obj.rows[j].element.style.display != 'none' && obj.records[j][i].element.style.display != 'none') {
+            if (obj.rows[j] && obj.records[j][i] && obj.rows[j].element.style.display != 'none' && obj.records[j][i].element.style.display != 'none') {
                 obj.records[j][i].element.classList.add('highlight');
                 obj.highlighted.push(obj.records[j][i]);
             }
@@ -431,9 +525,13 @@ export const updateSelectionFromCoords = function (x1, y1, x2, y2, origin) {
     for (let j = borderTop; j <= borderBottom; j++) {
         if (obj.rows[j] && obj.rows[j].element.style.display != 'none') {
             // Left border
-            obj.records[j][borderLeft].element.classList.add('highlight-left');
+            if (obj.records[j][borderLeft]) {
+                obj.records[j][borderLeft].element.classList.add('highlight-left');
+            }
             // Right border
-            obj.records[j][borderRight].element.classList.add('highlight-right');
+            if (obj.records[j][borderRight]) {
+                obj.records[j][borderRight].element.classList.add('highlight-right');
+            }
             // Add selected from rows
             obj.rows[j].element.classList.add('selected');
         }
@@ -500,6 +598,10 @@ export const refreshSelection = function () {
  */
 export const removeCopySelection = function () {
     const obj = this;
+
+    // Hide the fill-handle drag preview overlay too (covers both a mid-drag recompute,
+    // where it gets repositioned right after, and the final drag-end reset)
+    hideHighlightFill.call(obj);
 
     // Remove current selection
     for (let i = 0; i < obj.selection.length; i++) {

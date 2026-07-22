@@ -6,6 +6,7 @@ import { isColMerged } from './merges.js';
 import { createCell, updateTableReferences } from './internal.js';
 import { conditionalSelectionUpdate, updateCornerPosition, updateHighlightBorder, updateHighlightCopy } from './selection.js';
 import { setFooter } from './footer.js';
+import { updateFrozenColumnOffsets } from './freeze.js';
 import { getColumnNameFromId, injectArray } from './internalHelpers.js';
 
 export const getNumberOfColumns = function () {
@@ -629,6 +630,9 @@ export const setWidth = function (column, width, oldWidth) {
         // On resize column
         dispatch.call(obj, 'onresizecolumn', obj, column, width, oldWidth);
 
+        // Recompute frozen column offsets, since a resized column may shift them
+        updateFrozenColumnOffsets.call(obj);
+
         // Update corner position and selection overlay
         updateHighlightBorder.call(obj);
         updateCornerPosition.call(obj);
@@ -664,6 +668,9 @@ export const showColumn = function (colNumber) {
         setFooter.call(obj);
     }
 
+    // Showing a column may shift subsequent frozen columns' offsets
+    updateFrozenColumnOffsets.call(obj);
+
     obj.resetSelection();
 };
 
@@ -694,6 +701,9 @@ export const hideColumn = function (colNumber) {
     if (obj.options.footers) {
         setFooter.call(obj);
     }
+
+    // Hiding a column may shift subsequent frozen columns' offsets
+    updateFrozenColumnOffsets.call(obj);
 
     obj.resetSelection();
 };

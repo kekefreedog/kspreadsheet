@@ -108,6 +108,15 @@
     opacity: 0.5;
 }
 
+/* Row-number corner cell(s) (top-left blank cell of the header/nested-header/filter rows):
+   keep them pinned horizontally too, so the row numbers stay visible during horizontal
+   scroll regardless of freezeColumns — mirrors the header row's unconditional vertical stick. */
+.jss_worksheet > thead > tr > td:first-child {
+    left: 0;
+    z-index: 4;
+    border-right: 1px solid #ccc;
+}
+
 .jss_worksheet > thead > tr > td.selected {
     background-color: #dcdcdc;
 }
@@ -127,9 +136,18 @@
 }
 
 .jss_worksheet > tbody > tr > td:first-child {
-    position: relative;
+    position: -webkit-sticky;
+    position: sticky;
+    left: 0;
+    /* Only sticky on the left axis by default (like other single-axis frozen cells, z-index
+       1) — bumped to 2 below only when its own row is ALSO frozen (a true 2-axis corner).
+       Leaving this at 2 unconditionally made every row-number cell tie with the frozen rows'
+       cells; since non-frozen rows come later in DOM order, they'd win the tie while
+       scrolling up and paint over the frozen rows' numbers. */
+    z-index: 1;
     background-color: #f3f3f3;
     text-align: center;
+    border-right: 1px solid #ccc;
 }
 
 .jss_worksheet > tbody.resizable > tr > td:first-child::before {
@@ -325,18 +343,6 @@
 }
 .jss_worksheet .selection {
     background-color: rgba(0, 0, 0, 0.05);
-}
-.jss_worksheet .selection-left {
-    border-left: 1px dotted #000;
-}
-.jss_worksheet .selection-right {
-    border-right: 1px dotted #000;
-}
-.jss_worksheet .selection-top {
-    border-top: 1px dotted #000;
-}
-.jss_worksheet .selection-bottom {
-    border-bottom: 1px dotted #000;
 }
 .jss_corner {
     position: absolute;
@@ -681,12 +687,38 @@
     -moz-box-shadow: 2px 0px 2px 0.2px #ccc !important;
 }
 
-.jss_worksheet tbody .jss_freezed {
-    position: relative;
+.jss_worksheet tbody .jss_freezed,
+.jss_worksheet tbody .jss_row_freezed {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 1;
     background-color: #fff;
-    box-shadow: 1px 1px 1px 1px #ccc !important;
-    -webkit-box-shadow: 2px 4px 4px 0.1px #ccc !important;
-    -moz-box-shadow: 2px 4px 4px 0.1px #ccc !important;
+    /* Kept subtle on purpose: this shadow is applied per-cell (not just at the frozen
+       block's outer boundary), so across a whole frozen row/column/corner it compounds
+       into a lot of overlapping shadows — a strong value here reads as a heavy grid rather
+       than a soft divider. */
+    box-shadow: 1px 1px 2px 0px rgba(0, 0, 0, 0.15) !important;
+    -webkit-box-shadow: 1px 1px 2px 0px rgba(0, 0, 0, 0.15) !important;
+    -moz-box-shadow: 1px 1px 2px 0px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Corner cells (frozen on BOTH axes) need to paint above cells frozen on only one axis —
+   otherwise a same-z-index sibling that's frozen-row-only (scrolling horizontally underneath
+   the corner) or frozen-column-only (scrolling vertically underneath it) wins the paint-order
+   tie (later DOM sibling wins at equal z-index) and visually covers the corner. */
+.jss_worksheet tbody .jss_freezed.jss_row_freezed {
+    z-index: 2;
+}
+
+/* The row-number cell (first child of each row) is `position: relative` by default
+   (see rule above) — that rule is more specific than `.jss_row_freezed` alone, so this
+   override is needed for it to actually stick when its row is frozen. It's now a true
+   corner cell (frozen on both axes), so it needs the same higher z-index as the
+   `.jss_freezed.jss_row_freezed` corner rule above. */
+.jss_worksheet > tbody > tr > td:first-child.jss_row_freezed {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 2;
 }
 
 .red {

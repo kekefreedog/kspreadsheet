@@ -132,6 +132,22 @@ Serve your html file and then you will get the rendered table in your browser
 
 ## Jspreadsheet Changelog
 
+### Custom 2.4.0
+
+-   Add `freezeRows` option to pin the first N rows in place (mirrors `freezeColumns`), including support for `freezeRows` and `freezeColumns` combined at the same time;
+-   Rework `freezeColumns` to use CSS `position: sticky` instead of scroll-driven JS repositioning, fixing shaking/lag when scrolling horizontally with many columns;
+-   Keep the row-number column pinned during horizontal scroll regardless of `freezeColumns`, with a right border to separate it from the data;
+-   Fix frozen rows/columns being evicted from the DOM by `lazyLoading`'s row window when scrolling far down, and fix a stuck/stale row window after a fast scroll;
+-   Fix horizontal-only scrolling incorrectly triggering a vertical row reload when no `tableHeight` is configured;
+-   Add `cornerShape` (`'square'` | `'circle'`) and `cornerRadius` options to customize the fill-handle's shape;
+-   Show the same animated dashed selection border on the fill-handle drag preview as on a copy selection;
+-   Add Ctrl/Cmd + Arrow key navigation to jump to the edge of a data block, matching Excel/Google Sheets; Cmd now also works on Mac for Ctrl-modified arrow/Home/End navigation (previously Ctrl-only);
+-   Preserve configured column widths when exporting to XLSX;
+-   Fix the toolbar color picker's reset button not clearing a cell's color;
+-   Fix a crash in row/column range selection with invalid or out-of-range coordinates;
+-   Fix a crash when the mouse leaves the browser window during a column/row resize drag;
+-   Fix a brief flash of the wrong scroll position right after loading data with zoom configured;
+
 ### Custom
 
 -   Add onupdateresult event after search/filter;

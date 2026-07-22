@@ -6,17 +6,19 @@ import { down, first, last, left, right, up } from './keys.js';
 import { isColMerged, isRowMerged } from './merges.js';
 import {
     copyData,
+    hideHighlightFill,
     removeCopySelection,
     resetSelection,
     selectAll,
     updateCornerPosition,
     updateHighlightBorder,
     updateHighlightCopy,
+    updateHighlightFill,
     updateSelectionFromCoords,
 } from './selection.js';
 import { copy, paste } from './copyPaste.js';
 import { openFilter } from './filter.js';
-import { loadDown, loadUp } from './lazyLoading.js';
+import { firstNonFrozenChild, loadDown, loadPage, loadUp } from './lazyLoading.js';
 import { setWidth } from './columns.js';
 import { moveRow, setHeight } from './rows.js';
 import version from './version.js';
@@ -455,6 +457,12 @@ const mouseDownControls = function (e) {
 const mouseMoveControls = function (e) {
     e = e || window.event;
 
+    // When the mouse leaves the viewport during a drag, some browsers report
+    // e.target as the document itself (not an Element), which has no getAttribute.
+    if (!(e.target instanceof Element)) {
+        return;
+    }
+
     let mouseButton;
 
     if (e.buttons) {
@@ -642,6 +650,11 @@ const updateCopySelection = function (x3, y3) {
                     obj.selection.push(obj.records[j][i].element);
                 }
             }
+        }
+
+        // Same dashed marching-ants preview as the copy selection, over the fill destination range
+        if (obj.records[py] && obj.records[py][px] && obj.records[uy] && obj.records[uy][ux]) {
+            updateHighlightFill.call(obj, obj.records[py][px].element, obj.records[uy][ux].element);
         }
     }
 };
@@ -1360,22 +1373,22 @@ const keyDownControls = function (e) {
         if (!libraryBase.jspreadsheet.current.edition && libraryBase.jspreadsheet.current.selectedCell) {
             // Which key
             if (e.which == 37) {
-                left.call(libraryBase.jspreadsheet.current, e.shiftKey, e.ctrlKey);
+                left.call(libraryBase.jspreadsheet.current, e.shiftKey, isCtrl(e));
                 e.preventDefault();
             } else if (e.which == 39) {
-                right.call(libraryBase.jspreadsheet.current, e.shiftKey, e.ctrlKey);
+                right.call(libraryBase.jspreadsheet.current, e.shiftKey, isCtrl(e));
                 e.preventDefault();
             } else if (e.which == 38) {
-                up.call(libraryBase.jspreadsheet.current, e.shiftKey, e.ctrlKey);
+                up.call(libraryBase.jspreadsheet.current, e.shiftKey, isCtrl(e));
                 e.preventDefault();
             } else if (e.which == 40) {
-                down.call(libraryBase.jspreadsheet.current, e.shiftKey, e.ctrlKey);
+                down.call(libraryBase.jspreadsheet.current, e.shiftKey, isCtrl(e));
                 e.preventDefault();
             } else if (e.which == 36) {
-                first.call(libraryBase.jspreadsheet.current, e.shiftKey, e.ctrlKey);
+                first.call(libraryBase.jspreadsheet.current, e.shiftKey, isCtrl(e));
                 e.preventDefault();
             } else if (e.which == 35) {
-                last.call(libraryBase.jspreadsheet.current, e.shiftKey, e.ctrlKey);
+                last.call(libraryBase.jspreadsheet.current, e.shiftKey, isCtrl(e));
                 e.preventDefault();
             } else if (e.which == 46 || e.which == 8) {
                 // Delete
@@ -1533,23 +1546,49 @@ export const wheelControls = function (e) {
     if (obj.options.lazyLoading == true) {
         if (libraryBase.jspreadsheet.timeControlLoading == null) {
             libraryBase.jspreadsheet.timeControlLoading = setTimeout(function () {
-                if (obj.content.scrollTop + obj.content.clientHeight >= obj.content.scrollHeight - 10) {
-                    if (loadDown.call(obj)) {
-                        if (obj.content.scrollTop + obj.content.clientHeight > obj.content.scrollHeight - 10) {
-                            obj.content.scrollTop = obj.content.scrollTop - obj.content.clientHeight;
+                // `.content` is a single container scrolled both horizontally and vertically,
+                // so a native 'scroll' event fires for a PURELY horizontal scroll (e.g. freeze
+                // columns) too — not just vertical ones. Without a real vertical scroll range
+                // (e.g. `tableHeight` not configured, so `overflow-y: auto` never gets applied),
+                // `scrollHeight` ends up ~= `clientHeight`, which makes the "near the bottom"
+                // check below trivially true on every single scroll event, spuriously firing
+                // loadDown() over and over on plain horizontal scrolling. Only run the vertical
+                // lazy-loading logic when there's actually vertical overflow to scroll through.
+                if (obj.content.scrollHeight > obj.content.clientHeight) {
+                    if (obj.content.scrollTop + obj.content.clientHeight >= obj.content.scrollHeight - 10) {
+                        // NOTE: unlike the top edge below, there is no reliable "truly at the end"
+                        // signal here — `scrollHeight` only reflects the currently-loaded window
+                        // (there's no spacer/placeholder representing not-yet-loaded rows), so
+                        // "at the rendered bottom" is the same condition that legitimately fires on
+                        // every normal downward scroll tick, not a rare edge case. A prior attempt
+                        // to force-snap to the last page here fired constantly and hijacked normal
+                        // scrolling — reverted; this stays as plain incremental loadDown().
+                        if (loadDown.call(obj)) {
+                            if (obj.content.scrollTop + obj.content.clientHeight > obj.content.scrollHeight - 10) {
+                                obj.content.scrollTop = obj.content.scrollTop - obj.content.clientHeight;
+                            }
+                            updateHighlightBorder.call(obj);
+                            updateCornerPosition.call(obj);
+                            updateHighlightCopy.call(obj);
                         }
-                        updateHighlightBorder.call(obj);
-                        updateCornerPosition.call(obj);
-                        updateHighlightCopy.call(obj);
-                    }
-                } else if (obj.content.scrollTop <= obj.content.clientHeight) {
-                    if (loadUp.call(obj)) {
-                        if (obj.content.scrollTop < 10) {
-                            obj.content.scrollTop = obj.content.scrollTop + obj.content.clientHeight;
+                    } else if (obj.content.scrollTop <= obj.content.clientHeight) {
+                        // Same reasoning, mirrored for the top: scrollTop can already read 0 while the
+                        // loaded window is still stuck deep in the list (`firstNonFrozenChild` accounts
+                        // for freezeRows, which always occupy the physical front of tbody).
+                        const firstLoaded = firstNonFrozenChild(obj);
+                        if (obj.content.scrollTop === 0 && parseInt(firstLoaded?.getAttribute('data-y')) !== (obj.options.freezeRows || 0)) {
+                            loadPage.call(obj, 0);
+                            updateHighlightBorder.call(obj);
+                            updateCornerPosition.call(obj);
+                            updateHighlightCopy.call(obj);
+                        } else if (loadUp.call(obj)) {
+                            if (obj.content.scrollTop < 10) {
+                                obj.content.scrollTop = obj.content.scrollTop + obj.content.clientHeight;
+                            }
+                            updateHighlightBorder.call(obj);
+                            updateCornerPosition.call(obj);
+                            updateHighlightCopy.call(obj);
                         }
-                        updateHighlightBorder.call(obj);
-                        updateCornerPosition.call(obj);
-                        updateHighlightCopy.call(obj);
                     }
                 }
 
@@ -1559,112 +1598,17 @@ export const wheelControls = function (e) {
     }
 };
 
-let scrollLeft = 0;
-
-const updateFreezePosition = function () {
+/**
+ * Frozen columns/rows are pinned via CSS `position: sticky` (see `updateFrozenColumnOffsets`
+ * / `updateFrozenRowOffsets` in freeze.js), so they no longer need per-scroll repositioning.
+ * The selection overlay divs (`highlightBorder`/`highlightCopy`/`corner`), however, are plain
+ * scrolling children of `obj.content` positioned in content-coordinates — when the current
+ * selection includes a frozen (visually pinned) cell, the overlay must be re-synced on scroll
+ * or it will drift away from the now-stationary cell.
+ */
+const syncFreezeOverlayOnScroll = function () {
     const obj = this;
 
-    scrollLeft = obj.content.scrollLeft;
-    let width = 0;
-    const indexColWidth = obj.table.querySelector('.jss_selectall').offsetWidth;
-
-    if (obj.options.freezeColumns) {
-        if (scrollLeft > indexColWidth) {
-            const filter_tds = obj.element.querySelectorAll('td.jss_column_filter');
-            for (let i = 0; i < obj.options.freezeColumns; i++) {
-                if (i > 0) {
-                    // Must check if the previous column is hidden or not
-                    if (!obj.options.columns || !obj.options.columns[i - 1] || obj.options.columns[i - 1].type !== 'hidden') {
-                        const columnWidth =
-                            obj.options.columns && obj.options.columns[i - 1] && obj.options.columns[i - 1].width !== undefined
-                                ? parseInt(obj.options.columns[i - 1].width)
-                                : obj.options.defaultColWidth !== undefined
-                                ? parseInt(obj.options.defaultColWidth)
-                                : 100;
-                        width += columnWidth;
-                    }
-                }
-                obj.headers[i].classList.add('jss_freezed');
-                obj.headers[i].style.left = width + 'px';
-                if (filter_tds.length >= i + 1) {
-                    filter_tds[i].classList.add('jss_freezed');
-                    filter_tds[i].style.left = width + 'px';
-                }
-                for (let j = 0; j < obj.rows.length; j++) {
-                    if (obj.rows[j] && obj.records[j][i]) {
-                        const zoom = obj.zoom || 100;
-                        const prevWidth = i > 0 ? parseInt(obj.records[j][i - 1].element.style.width) || 0 : 0;
-                        const shifted = scrollLeft + prevWidth - (indexColWidth + 1) * (zoom / 100);
-                        obj.records[j][i].element.classList.add('jss_freezed');
-                        obj.records[j][i].element.style.left = `${Math.round(shifted / (zoom / 100))}px`;
-                    }
-                }
-            }
-
-            if (Array.isArray(obj.options.nestedHeaders) && obj.options.nestedHeaders.length) {
-                for (const nestedParent of obj.options.nestedHeaders) {
-                    if (Array.isArray(nestedParent) && nestedParent.length) {
-                        const nestedEl = 'element' in nestedParent && nestedParent.element instanceof HTMLTableRowElement ? nestedParent.element : null;
-                        if (!nestedEl) continue;
-                        let colIndex = 0;
-                        let ni = 1;
-                        let currentWidth = 0;
-                        for (const nested of nestedParent) {
-                            const colspan = parseInt(nested.colspan) || 1;
-                            if (colIndex >= obj.options.freezeColumns) break;
-                            nestedEl.children[ni].classList.add('jss_freezed');
-                            nestedEl.children[ni].style.left = `${currentWidth}px`;
-                            for (let ci = colIndex; ci < colIndex + colspan && ci < obj.options.freezeColumns; ci++) {
-                                if (!obj.options.columns || !obj.options.columns[ci] || obj.options.columns[ci].type !== 'hidden') {
-                                    const colW =
-                                        obj.options.columns && obj.options.columns[ci] && obj.options.columns[ci].width !== undefined
-                                            ? parseInt(obj.options.columns[ci].width)
-                                            : obj.options.defaultColWidth !== undefined
-                                            ? parseInt(obj.options.defaultColWidth)
-                                            : 100;
-                                    currentWidth += colW;
-                                }
-                            }
-                            colIndex += colspan;
-                            ni++;
-                        }
-                    }
-                }
-            }
-        } else {
-            for (let i = 0; i < obj.options.freezeColumns; i++) {
-                obj.headers[i].classList.remove('jss_freezed');
-                obj.headers[i].style.left = '';
-                for (let j = 0; j < obj.rows.length; j++) {
-                    if (obj.records[j][i]) {
-                        obj.records[j][i].element.classList.remove('jss_freezed');
-                        obj.records[j][i].element.style.left = '';
-                    }
-                }
-            }
-
-            if (Array.isArray(obj.options.nestedHeaders) && obj.options.nestedHeaders.length) {
-                for (const nestedParent of obj.options.nestedHeaders) {
-                    if (Array.isArray(nestedParent) && nestedParent.length) {
-                        const nestedEl = 'element' in nestedParent && nestedParent.element instanceof HTMLTableRowElement ? nestedParent.element : null;
-                        if (!nestedEl) continue;
-                        let colIndex = 0;
-                        let ni = 1;
-                        for (const nested of nestedParent) {
-                            const colspan = parseInt(nested.colspan) || 1;
-                            if (colIndex >= obj.options.freezeColumns) break;
-                            nestedEl.children[ni].classList.remove('jss_freezed');
-                            nestedEl.children[ni].style.removeProperty('left');
-                            colIndex += colspan;
-                            ni++;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Place the corner in the correct place
     updateHighlightBorder.call(obj);
     updateCornerPosition.call(obj);
     updateHighlightCopy.call(obj);
@@ -1675,8 +1619,8 @@ export const scrollControls = function (e) {
 
     wheelControls.call(obj);
 
-    if (obj.options.freezeColumns > 0 && obj.content.scrollLeft != scrollLeft) {
-        updateFreezePosition.call(obj);
+    if (obj.options.freezeColumns > 0 || obj.options.freezeRows > 0) {
+        syncFreezeOverlayOnScroll.call(obj);
     }
 
     // Close editor

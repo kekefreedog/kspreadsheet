@@ -5,6 +5,7 @@ import dispatch from './dispatch.js';
 import { isRowMerged } from './merges.js';
 import { conditionalSelectionUpdate, getSelectedRows, updateCornerPosition, updateHighlightBorder, updateHighlightCopy } from './selection.js';
 import { setHistory } from './history.js';
+import { updateFrozenRowOffsets } from './freeze.js';
 import { getColumnNameFromId } from './internalHelpers.js';
 
 /**
@@ -551,6 +552,9 @@ export const setHeight = function (row, height, oldHeight) {
         // On resize column
         dispatch.call(obj, 'onresizerow', obj, row, height, oldHeight);
 
+        // Recompute frozen row offsets, since a resized row may shift them
+        updateFrozenRowOffsets.call(obj);
+
         // Update corner position and selection overlay
         updateHighlightBorder.call(obj);
         updateCornerPosition.call(obj);
@@ -571,6 +575,9 @@ export const showRow = function (rowNumber) {
     rowNumber.forEach(function (rowIndex) {
         obj.rows[rowIndex].element.style.display = '';
     });
+
+    // Showing a row may shift subsequent frozen rows' offsets
+    updateFrozenRowOffsets.call(obj);
 };
 
 /**
@@ -586,6 +593,9 @@ export const hideRow = function (rowNumber) {
     rowNumber.forEach(function (rowIndex) {
         obj.rows[rowIndex].element.style.display = 'none';
     });
+
+    // Hiding a row may shift subsequent frozen rows' offsets
+    updateFrozenRowOffsets.call(obj);
 };
 
 /**

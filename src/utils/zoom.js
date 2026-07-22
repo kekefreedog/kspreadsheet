@@ -54,17 +54,22 @@ export const setZoom = function (zoomValue) {
                 const newScrollWidth = this.table.parentElement.scrollWidth;
                 const newScrollHeight = this.table.parentElement.scrollHeight;
 
-                // Calculate the width and height ratios
-                const widthRatio = newScrollWidth / oldScrollWidth;
-                const heightRatio = newScrollHeight / oldScrollHeight;
+                // Only rescale the scroll position if there was something to scroll in the first place.
+                // Otherwise (e.g. zoom applied before data is loaded) the ratio is meaningless and would
+                // stomp over whatever scroll position was set in the meantime.
+                if (oldScrollWidth > 0 && oldScrollHeight > 0) {
+                    // Calculate the width and height ratios
+                    const widthRatio = newScrollWidth / oldScrollWidth;
+                    const heightRatio = newScrollHeight / oldScrollHeight;
 
-                // Calculate the new scroll positions
-                const newScrollLeft = Math.round(oldScrollLeft * widthRatio);
-                const newScrollTop = Math.round(oldScrollTop * heightRatio);
+                    // Calculate the new scroll positions
+                    const newScrollLeft = Math.round(oldScrollLeft * widthRatio);
+                    const newScrollTop = Math.round(oldScrollTop * heightRatio);
 
-                // Apply the new scroll positions
-                this.table.parentElement.scrollLeft = newScrollLeft;
-                this.table.parentElement.scrollTop = newScrollTop;
+                    // Apply the new scroll positions
+                    this.table.parentElement.scrollLeft = newScrollLeft;
+                    this.table.parentElement.scrollTop = newScrollTop;
+                }
 
                 updateOverlays();
             }, 0); // 0ms delay ensures it waits for rendering updates

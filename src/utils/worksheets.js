@@ -203,6 +203,49 @@ const createTable = function () {
     obj.corner.setAttribute('unselectable', 'on');
     obj.corner.setAttribute('onselectstart', 'return false');
 
+    // Optional cosmetic customization of the fill-handle shape: 'square' (default, sharp
+    // corners) or 'circle' (fully round); cornerRadius (px) gives a rounded-square look on
+    // top of either — 'circle' is always fully round regardless of cornerRadius.
+    // The final `else` (plain 'square'/unset shape with no radius) is explicit here — set to
+    // '0', not just left unset — so cornerShape: 'square' is guaranteed sharp corners rather
+    // than relying on "nothing else ran" to imply it.
+    if (obj.options.cornerShape === 'circle') {
+        obj.corner.style.borderRadius = '50%';
+    } else if (obj.options.cornerRadius) {
+        obj.corner.style.borderRadius = parseInt(obj.options.cornerRadius) + 'px';
+    } else {
+        obj.corner.style.borderRadius = '0';
+    }
+
+    // The default handle is tiny by design (1px content + 2px padding + 1px border = 7px
+    // total), which is too small for a rounded-square radius to read as anything other than
+    // a near-circle (CSS clamps border-radius to at most half the box), AND too small for
+    // border-radius: 50% to anti-alias into a smooth circle (renders as a jagged/scalloped
+    // blob at ~12px). Only when a custom shape/radius is actually configured, grow the box
+    // enough for a genuinely smooth curve; the default (unconfigured) size is untouched.
+    if (obj.options.cornerShape === 'circle' || obj.options.cornerRadius) {
+        obj.corner.style.width = '10px';
+        obj.corner.style.height = '10px';
+
+        // The default's 1px white border exists to separate the tiny sharp-cornered square
+        // from adjacent (often black) selection border lines. On a curved shape it's actively
+        // harmful: a thin stroke on a small curve needs to anti-alias TWO close concentric
+        // edges (inner + outer) instead of one filled edge, which is what produces the jagged/
+        // aliased look. Drop it — the bigger filled shape is plenty visible without it.
+        // (Longhand `borderWidth`, not the `border` shorthand — jsdom's CSSOM silently drops
+        // shorthand assignments it can't parse, and this is more robust in real browsers too.)
+        obj.corner.style.borderWidth = '0';
+
+        // `updateCornerPosition` (selection.js) positions this element assuming the default
+        // ~7px total box size (content + 2px padding + 1px border each side), centering it on
+        // the selected cell's corner. Growing the box without compensating would offset it
+        // visibly down-right of the corner instead of staying centered on it — pull it back by
+        // half the size difference. Removing the border above shifts the total from 16px to
+        // 14px (10px content + 4px padding), a 7px difference from the 7px default, so -3.5px.
+        obj.corner.style.marginTop = '-3.5px';
+        obj.corner.style.marginLeft = '-3.5px';
+    }
+
     // Spreadsheet highlight border
     obj.highlightBorder = document.createElement('div');
     obj.highlightBorder.classList.add('jss_border', 'jss_border_main');
@@ -210,6 +253,13 @@ const createTable = function () {
     // Spreadsheet highlight copy
     obj.highlightCopy = document.createElement('div');
     obj.highlightCopy.classList.add('jss_border', 'jss_border_copying');
+
+    // Fill-handle drag preview (destination range while dragging the corner), same
+    // marching-ants dashed style as the copy selection
+    obj.highlightFill = document.createElement('div');
+    obj.highlightFill.classList.add('jss_border', 'jss_border_copying');
+    obj.highlightFill.style.top = '-2000px';
+    obj.highlightFill.style.left = '-2000px';
 
     if (obj.options.selectionCopy == false) {
         obj.corner.style.display = 'none';
@@ -260,6 +310,7 @@ const createTable = function () {
     obj.content.appendChild(obj.corner);
     obj.content.appendChild(obj.highlightBorder);
     obj.content.appendChild(obj.highlightCopy);
+    obj.content.appendChild(obj.highlightFill);
     obj.content.appendChild(obj.textarea);
 
     obj.element.appendChild(obj.content);
@@ -307,12 +358,13 @@ const createTable = function () {
     obj.zoomMax = 400;
     obj.zoomStep = 10;
     obj.zoom = 100;
-    if (obj.options.defaultZoom || obj.parent.config.defaultZoom) {
-        obj.resetZoom();
-    }
 
     // Load data
     obj.setData.call(obj);
+
+    if (obj.options.defaultZoom || obj.parent.config.defaultZoom) {
+        obj.resetZoom();
+    }
 
     // Style
     if (obj.options.style) {

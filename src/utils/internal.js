@@ -5,7 +5,7 @@ import dispatch from './dispatch.js';
 import { refreshSelection, updateCornerPosition, updateHighlightBorder, updateHighlightCopy } from './selection.js';
 import { getColumnName } from './helpers.js';
 import { updateMeta } from './meta.js';
-import { getFreezeWidth } from './freeze.js';
+import { getFreezeWidth, updateFrozenColumnOffsets, updateFrozenRowOffsets } from './freeze.js';
 import { updatePagination } from './pagination.js';
 import { setFooter } from './footer.js';
 import { getColumnNameFromId, getIdFromColumnName } from './internalHelpers.js';
@@ -64,6 +64,10 @@ export const updateTable = function () {
     if (obj.options.columns.length < obj.options.minDimensions[0]) {
         obj.options.minDimensions[0] = obj.options.columns.length;
     }
+
+    // Pin frozen columns/rows at their resting position (position: sticky handles the rest on scroll)
+    updateFrozenColumnOffsets.call(obj);
+    updateFrozenRowOffsets.call(obj);
 
     // Update corner position and selection overlay
     setTimeout(function () {

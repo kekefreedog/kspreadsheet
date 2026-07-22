@@ -28,6 +28,14 @@ export const download = function (includeHeaders, processed, type = 'csv') {
 
         // Create worksheet & workbook
         const worksheet = XLSX.utils.aoa_to_sheet(dataWithHeaders);
+
+        // Preserve configured column widths (pixels map directly to SheetJS's `wpx`)
+        if (obj.options.columns && obj.options.columns.length > 0) {
+            worksheet['!cols'] = obj.options.columns.map((column) => ({
+                wpx: parseInt(column && column.width !== undefined ? column.width : obj.options.defaultColWidth || 100),
+            }));
+        }
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, this.worksheetName ? this.worksheetName : 'Sheet1');
 
