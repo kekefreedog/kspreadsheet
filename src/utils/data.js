@@ -1,4 +1,5 @@
 import { createRow } from './rows.js';
+import { getNumberOfColumns, createCellHeader } from './columns.js';
 import { updateCell, updateFormulaChain, updateTable } from './internal.js';
 import { getIdFromColumnName } from './internalHelpers.js';
 import dispatch from './dispatch.js';
@@ -98,6 +99,19 @@ export const setData = function (data) {
     } else {
         startNumber = 0;
         finalNumber = obj.options.data.length;
+    }
+
+    // Ensure headers/cols exist for every column the data requires. The header
+    // cells are built once at worksheet creation from the column count known at
+    // that time; if setData later supplies rows with more columns than there are
+    // headers, createCell would read an undefined obj.headers[i]. Extend them here.
+    const numberOfColumns = getNumberOfColumns.call(obj);
+    if (obj.headers.length < numberOfColumns) {
+        for (let i = obj.headers.length; i < numberOfColumns; i++) {
+            createCellHeader.call(obj, i);
+            obj.headerContainer.appendChild(obj.headers[i]);
+            obj.colgroupContainer.appendChild(obj.cols[i].colElement);
+        }
     }
 
     // Append nodes to the HTML

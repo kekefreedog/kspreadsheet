@@ -301,9 +301,9 @@ export const parseValue = function (i, j, value, cell) {
                         const t1 = t[1].match(new RegExp('\\[Red\\]', 'gi'));
                         if (t1) {
                             if (value < 0) {
-                                cell.classList.add('red');
+                                cell.classList.add('jss_red');
                             } else {
-                                cell.classList.remove('red');
+                                cell.classList.remove('jss_red');
                             }
                         }
                         const t2 = t[1].match(new RegExp('\\(', 'gi'));

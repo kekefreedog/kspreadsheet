@@ -14,7 +14,7 @@ window.jss = jspreadsheet;
  * and can be exported as JSON/Markdown at the end.
  */
 
-const STORAGE_KEY = 'kspreadsheet_manual_qa_v12';
+const STORAGE_KEY = 'kspreadsheet_manual_qa_v12_reprooffset';
 
 const root = document.getElementById('root');
 
@@ -25,6 +25,51 @@ extra.id = 'qa-extra';
 document.body.appendChild(extra);
 
 const scenarios = [
+    {
+        name: 'REPRO: Planning offset (only 3 cols defined, data has 34)',
+        check: 'Mirrors the Rodeo Planning grid EXACTLY: only 3 columns defined (People/Speciality/Location, widths 200/100/60, wordWrap), NO width on date cols, nestedHeaders colspan 3+27=30, minDimensions [30,100], then setData() with 34-column rows (31 date cols). Watch whether frozen body cells drift from the header.',
+        render() {
+            const columns = [
+                { type: 'text', title: 'People', width: 200, wordWrap: true },
+                { type: 'dropdown', title: 'Speciality', width: 100, wordWrap: true, multiple: true, source: ['BLANK', 'LIGHT', 'COMP', 'FX'] },
+                { type: 'dropdown', title: 'Location', width: 60, wordWrap: true, source: ['🇨🇦', '🇫🇷', '🇺🇸'] },
+            ];
+
+            const inst = jspreadsheet(root, {
+                worksheets: [
+                    {
+                        columns,
+                        freezeColumns: 3,
+                        lazyLoading: true,
+                        tableOverflow: true,
+                        minDimensions: [30, 100],
+                        filters: false,
+                        allowComments: true,
+                        nestedHeaders: [
+                            [{ colspan: 3 }, { title: '_', colspan: 27 }],
+                            [
+                                { title: ' Person Info', colspan: 3, align: 'center' },
+                                { title: '_', colspan: 27 },
+                            ],
+                        ],
+                    },
+                ],
+            });
+
+            // Emulate the app's refresh: setData with full-grid rows that have MORE columns (34) than defined (3)
+            const specialities = ['BLANK', 'LIGHT', 'COMP', 'FX'];
+            const projects = ['Not Available', 'kv2b', 'Vacations', 'cc5', 'v2b'];
+            const data = [];
+            for (let r = 0; r < 40; r++) {
+                const row = ['Person ' + (r + 1), specialities[r % specialities.length], '🇫🇷'];
+                for (let c = 0; c < 31; c++) row.push(projects[(r + c) % projects.length]);
+                data.push(row);
+            }
+            inst[0].setData(data);
+
+            return inst;
+        },
+    },
     {
         name: 'Basic grid + tabs/toolbar',
         check: 'A blank 10x20 grid appears with a toolbar on top and a worksheet tab at the bottom. Click a few cells and type text; normal editing should work.',

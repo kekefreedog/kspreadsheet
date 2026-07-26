@@ -108,6 +108,15 @@
     opacity: 0.5;
 }
 
+/* Row-number corner cell(s) (top-left blank cell of the header/nested-header/filter rows):
+   keep them pinned horizontally too, so the row numbers stay visible during horizontal
+   scroll regardless of freezeColumns — mirrors the header row's unconditional vertical stick. */
+.jss_worksheet > thead > tr > td:first-child {
+    left: 0;
+    z-index: 4;
+    border-right: 1px solid #ccc;
+}
+
 .jss_worksheet > thead > tr > td.selected {
     background-color: #dcdcdc;
 }
@@ -127,9 +136,18 @@
 }
 
 .jss_worksheet > tbody > tr > td:first-child {
-    position: relative;
+    position: -webkit-sticky;
+    position: sticky;
+    left: 0;
+    /* Only sticky on the left axis by default (like other single-axis frozen cells, z-index
+       1) — bumped to 2 below only when its own row is ALSO frozen (a true 2-axis corner).
+       Leaving this at 2 unconditionally made every row-number cell tie with the frozen rows'
+       cells; since non-frozen rows come later in DOM order, they'd win the tie while
+       scrolling up and paint over the frozen rows' numbers. */
+    z-index: 1;
     background-color: #f3f3f3;
     text-align: center;
+    border-right: 1px solid #ccc;
 }
 
 .jss_worksheet > tbody.resizable > tr > td:first-child::before {
@@ -268,25 +286,26 @@
 }
 
 .jss_worksheet .highlight {
-    background-color: rgba(0, 0, 0, 0.05);
+    /* background-color: rgba(0, 0, 0, 0.05); — handled by div overlay */
 }
 
+/* Legacy borders disabled for regular cells — div overlay (jss_border_main) handles the selection border */
 .jss_worksheet .highlight-top {
-    border-top: 1px solid #000;
+    /* border-top: 1px solid #000; */
     box-shadow: 0px -1px #ccc;
 }
 
 .jss_worksheet .highlight-left {
-    border-left: 1px solid #000;
+    /* border-left: 1px solid #000; */
     box-shadow: -1px 0px #ccc;
 }
 
 .jss_worksheet .highlight-right {
-    border-right: 1px solid #000;
+    /* border-right: 1px solid #000; */
 }
 
 .jss_worksheet .highlight-bottom {
-    border-bottom: 1px solid #000;
+    /* border-bottom: 1px solid #000; */
 }
 
 .jss_worksheet .highlight-top.highlight-left {
@@ -295,23 +314,35 @@
     -moz-box-shadow: -1px -1px #ccc;
 }
 
+/* Frozen columns: keep legacy borders since overlay div doesn't work with position:absolute */
+.jss_worksheet .jss_freezed.highlight {
+    background-color: #f3f3f3;
+}
+
+.jss_worksheet .jss_freezed.highlight-top {
+    border-top: 1px solid #000;
+    box-shadow: 0px -1px #ccc;
+}
+
+.jss_worksheet .jss_freezed.highlight-bottom {
+    border-bottom: 1px solid #000;
+    box-shadow: 0px 0px #ccc;
+}
+
+.jss_worksheet .jss_freezed.highlight-left {
+    border-left: 1px solid #000;
+    box-shadow: -1px 0px #ccc;
+}
+
+.jss_worksheet .jss_freezed.highlight-right {
+    border-right: 1px solid #000;
+}
+
 .jss_worksheet .highlight-selected {
     background-color: rgba(0, 0, 0, 0);
 }
 .jss_worksheet .selection {
     background-color: rgba(0, 0, 0, 0.05);
-}
-.jss_worksheet .selection-left {
-    border-left: 1px dotted #000;
-}
-.jss_worksheet .selection-right {
-    border-right: 1px dotted #000;
-}
-.jss_worksheet .selection-top {
-    border-top: 1px dotted #000;
-}
-.jss_worksheet .selection-bottom {
-    border-bottom: 1px dotted #000;
 }
 .jss_corner {
     position: absolute;
@@ -602,20 +633,38 @@
     zoom: 0.55;
 }
 
+/* Legacy copy borders disabled — jss_border_copying div overlay handles the animated dashed border */
 .jss_worksheet .copying-top {
-    border-top: 1px dashed #000;
+    /* border-top: 1px dashed #000; */
 }
 
 .jss_worksheet .copying-left {
-    border-left: 1px dashed #000;
+    /* border-left: 1px dashed #000; */
 }
 
 .jss_worksheet .copying-right {
-    border-right: 1px dashed #000;
+    /* border-right: 1px dashed #000; */
 }
 
 .jss_worksheet .copying-bottom {
-    border-bottom: 1px dashed #000;
+    /* border-bottom: 1px dashed #000; */
+}
+
+/* Frozen columns: keep legacy dashed borders since the overlay div doesn't cover them */
+.jss_worksheet .jss_freezed.copying-top {
+    border-top: 2px dashed #000;
+}
+
+.jss_worksheet .jss_freezed.copying-left {
+    border-left: 2px dashed #000;
+}
+
+.jss_worksheet .jss_freezed.copying-right {
+    border-right: 2px dashed #000;
+}
+
+.jss_worksheet .jss_freezed.copying-bottom {
+    border-bottom: 2px dashed #000;
 }
 
 .jss_worksheet .jss_column_filter {
@@ -638,15 +687,43 @@
     -moz-box-shadow: 2px 0px 2px 0.2px #ccc !important;
 }
 
-.jss_worksheet tbody .jss_freezed {
-    position: relative;
+.jss_worksheet tbody .jss_freezed,
+.jss_worksheet tbody .jss_row_freezed {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 1;
     background-color: #fff;
-    box-shadow: 1px 1px 1px 1px #ccc !important;
-    -webkit-box-shadow: 2px 4px 4px 0.1px #ccc !important;
-    -moz-box-shadow: 2px 4px 4px 0.1px #ccc !important;
+    /* Kept subtle on purpose: this shadow is applied per-cell (not just at the frozen
+       block's outer boundary), so across a whole frozen row/column/corner it compounds
+       into a lot of overlapping shadows — a strong value here reads as a heavy grid rather
+       than a soft divider. */
+    box-shadow: 1px 1px 2px 0px rgba(0, 0, 0, 0.15) !important;
+    -webkit-box-shadow: 1px 1px 2px 0px rgba(0, 0, 0, 0.15) !important;
+    -moz-box-shadow: 1px 1px 2px 0px rgba(0, 0, 0, 0.15) !important;
 }
 
-.red {
+/* Corner cells (frozen on BOTH axes) need to paint above cells frozen on only one axis —
+   otherwise a same-z-index sibling that's frozen-row-only (scrolling horizontally underneath
+   the corner) or frozen-column-only (scrolling vertically underneath it) wins the paint-order
+   tie (later DOM sibling wins at equal z-index) and visually covers the corner. */
+.jss_worksheet tbody .jss_freezed.jss_row_freezed {
+    z-index: 2;
+}
+
+/* The row-number cell (first child of each row) is `position: relative` by default
+   (see rule above) — that rule is more specific than `.jss_row_freezed` alone, so this
+   override is needed for it to actually stick when its row is frozen. It's now a true
+   corner cell (frozen on both axes), so it needs the same higher z-index as the
+   `.jss_freezed.jss_row_freezed` corner rule above. */
+.jss_worksheet > tbody > tr > td:first-child.jss_row_freezed {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 2;
+}
+
+/* Namespaced (was `.red`) to avoid colliding with framework color-helper
+   classes such as Materialize's `.red { background-color:#f44336 !important }`. */
+.jss_red {
     color: red;
 }
 
@@ -654,4 +731,137 @@
 .jss_worksheet > tbody > tr > td.readonly > input[type='radio'] {
     pointer-events: none;
     opacity: 0.5;
+}
+
+/* Selection div overlay (instead of border on cells) */
+.jss_border {
+    position: absolute;
+    border: 1px solid transparent;
+    pointer-events: none;
+    opacity: 0.6;
+    box-sizing: border-box;
+    z-index: 2;
+}
+
+.jss_border_main {
+    border: 1px solid #000;
+    background-color: #00000015;
+    background-origin: content-box;
+}
+
+.jss_border_copying {
+    background-size: 8px 1px, 8px 1px, 1px 8px, 1px 8px;
+    background-position: 0 0, 0 100%, 0 0, 100% 0;
+    background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+    background-image: linear-gradient(to right, #fff 50%, #444 50%), linear-gradient(to right, #fff 50%, #444 50%),
+        linear-gradient(to bottom, #fff 50%, #444 50%), linear-gradient(to bottom, #fff 50%, #444 50%);
+    animation: ants 2s linear infinite;
+    opacity: 1;
+}
+
+.jss_freezed .jss_border {
+    z-index: 3 !important;
+}
+
+@keyframes ants {
+    0% {
+        background-position: 0 0, 0 100%, 0 0, 100% 0;
+    }
+    100% {
+        background-position: 40px 0, -40px 100%, 0 -40px, 100% 40px;
+    }
+}
+
+/* ==================================================================
+   Third-party CSS framework hardening
+   ------------------------------------------------------------------
+   Defensive resets so kspreadsheet renders correctly when embedded in a
+   page that ships an opinionated global stylesheet (Materialize, Bootstrap,
+   Foundation, …). Those frameworks style bare element/attribute selectors —
+   table, td, input, select, checkbox/radio, a — which otherwise bleed into
+   the grid and distort inline editors, cell borders and controls.
+
+   Everything here is scoped to the `.jss_spreadsheet` root, so it only
+   affects the widget and never the host page. `!important` is used only for
+   properties a framework forces with no `!important` of its own but at a
+   specificity we can't cheaply out-rank (e.g. fixed input heights); the
+   checkbox/radio and select rules instead out-specify the framework so the
+   grid's own `readonly`/width rules still win over them.
+   ================================================================== */
+
+/* Tables & cells: frameworks force border-collapse:collapse, width:100%,
+   rounded corners. The grid needs separated borders (sticky headers work off
+   them) and square, un-rounded cells; its own padding rules are already more
+   specific so they are left untouched. */
+.jss_spreadsheet table.jss_worksheet {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 0;
+}
+
+.jss_spreadsheet td,
+.jss_spreadsheet th {
+    border-radius: 0;
+    background-clip: border-box;
+}
+
+/* Text inputs / textareas / selects: frameworks impose fixed heights,
+   bottom-border "underlines", focus glow, content-box sizing and a 16px
+   font — all of which distort inline cell editors, the search box and filter
+   fields. Checkboxes/radios are excluded (handled below). */
+.jss_spreadsheet input:not([type='checkbox']):not([type='radio']),
+.jss_spreadsheet textarea,
+.jss_spreadsheet select {
+    box-sizing: border-box !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-size: inherit;
+    line-height: normal;
+    transition: none !important;
+}
+
+.jss_spreadsheet input:focus,
+.jss_spreadsheet textarea:focus,
+.jss_spreadsheet select:focus {
+    border-bottom: 0 none !important;
+    box-shadow: none !important;
+    outline: none;
+}
+
+/* Native <select> (pagination selector, select-type editors): Materialize
+   sets `select:not(.browser-default){display:none}` and replaces it with a
+   JS-built dropdown the grid never generates. Out-specify it to keep the
+   real control visible. */
+.jss_spreadsheet select,
+.jss_spreadsheet select:not(.browser-default) {
+    display: inline-block;
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+}
+
+/* Checkboxes & radios: frameworks hide the native control (opacity:0,
+   position:absolute, pointer-events:none) to swap in a label-based custom
+   one. The grid renders raw controls, so force them back. These selectors
+   out-specify the framework's (root class adds specificity) yet stay below
+   the grid's own `.readonly > input[...]` dimming rule, so read-only cells
+   still render correctly. */
+.jss_spreadsheet input[type='checkbox'],
+.jss_spreadsheet input[type='radio'] {
+    position: static;
+    left: auto;
+    opacity: 1;
+    pointer-events: auto;
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+}
+
+/* Links inside the grid shouldn't take the framework's global anchor color;
+   the grid's own `.highlight > a` (blue) rule is more specific and preserved. */
+.jss_spreadsheet a {
+    color: inherit;
 }
