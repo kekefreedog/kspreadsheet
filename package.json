@@ -3,12 +3,13 @@
     "version": "2.4.1",
     "title": "The Javascript Spreadsheet",
     "description": "Jspreadsheet is a lightweight, vanilla javascript plugin to create amazing web-based interactive data grids with spreadsheet like controls compatible with Excel, Google Spreadsheets and any other spreadsheet software.",
+    "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/jspreadsheet/ce.git"
+        "url": "https://github.com/kekefreedog/kspreadsheet.git"
     },
     "author": {
-        "name": "Contact <contact@jspreadsheet.com>"
+        "name": "Kevin Zarshenas <kevin.zarshenas@gmail.com>"
     },
     "keywords": [
         "spreadsheet",
@@ -82,9 +83,12 @@
     },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
-    "bugs": "https://github.com/jspreadsheet/ce/issues",
-    "homepage": "https://github.com/jspreadsheet/ce",
-    "download": "https://github.com/jspreadsheet/ce/archive/master.zip",
+    "files": [
+        "dist"
+    ],
+    "bugs": "https://github.com/kekefreedog/kspreadsheet/issues",
+    "homepage": "https://github.com/kekefreedog/kspreadsheet",
+    "download": "https://github.com/kekefreedog/kspreadsheet/archive/master.zip",
     "scripts": {
         "format": "npm run prettier:fix && npm run lint:fix",
         "lint": "eslint .",
@@ -94,6 +98,9 @@
         "start": "webpack serve --history-api-fallback",
         "prebuild": "npm run prettier:fix && npm run lint:fix",
         "build": "cross-env NODE_ENV=production webpack --config webpack.config.js",
-        "test": "npm run build && mocha --recursive --require=mocha.config.js"
+        "build:css": "cp src/jspreadsheet.css dist/jspreadsheet.css && cp src/jspreadsheet.themes.css dist/jspreadsheet.themes.css",
+        "dist": "cross-env NODE_ENV=production webpack --config webpack.config.js && npm run build:css",
+        "test": "npm run build && mocha --recursive --require=mocha.config.js",
+        "prepublishOnly": "npm run dist"
     }
 }
