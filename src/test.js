@@ -656,6 +656,37 @@ const scenarios = [
         },
     },
     {
+        name: 'REPRO: lazy loading on a dense grid (window shorter than two viewports)',
+        check: 'Mirrors the Rodeo Planning grid: 400 rows squeezed to 10px each, so the 100 rows the lazy loading keeps are barely taller than the viewport. Scroll down to the bottom, slowly and by flicks, and watch the row numbers on the left. They must keep growing until row 400 : the window must never jump back to row 1, the rows under the cursor must not jump by a screenful on their own, and letting go must not leave the grid scrolling by itself. Then scroll all the way back up, the numbers must come back down to 1 without ever going backwards.',
+        render() {
+            /**
+             * The row height is what breaks the lazy loading : the window is a fixed number of rows
+             * and nothing stands in for the rows that are not loaded, so the denser the rows the
+             * shorter the window is compared to the viewport it has to scroll through.
+             */
+            const style = document.createElement('style');
+            style.innerHTML = '#root td, #root td.jss_row { height: 10px; line-height: 10px; padding: 0 4px; font-size: 9px; }';
+            extra.appendChild(style);
+
+            const data = [];
+            for (let y = 0; y < 400; y++) {
+                data.push(['row ' + (y + 1), y, 'x', 'y', 'z']);
+            }
+
+            return jspreadsheet(root, {
+                worksheets: [
+                    {
+                        data: data,
+                        tableOverflow: true,
+                        tableHeight: '700px',
+                        lazyLoading: true,
+                        freezeColumns: 1,
+                    },
+                ],
+            });
+        },
+    },
+    {
         name: 'Column resize past window edge (REGRESSION: mousemove crash)',
         check: 'REGRESSION CHECK: drag a column border to resize it, moving the mouse fast past the left/right edge of the browser window (outside the page) while still holding the mouse button, then release. No red console errors ("getAttribute is not a function") should appear. Repeat a couple of times.',
         render() {

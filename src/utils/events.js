@@ -18,7 +18,7 @@ import {
 } from './selection.js';
 import { copy, paste } from './copyPaste.js';
 import { openFilter } from './filter.js';
-import { firstNonFrozenChild, loadDown, loadPage, loadUp } from './lazyLoading.js';
+import { firstNonFrozenChild, loadDown, loadedEdgeMargin, loadPage, loadUp } from './lazyLoading.js';
 import { setWidth } from './columns.js';
 import { moveRow, setHeight } from './rows.js';
 import version from './version.js';
@@ -1554,8 +1554,23 @@ export const wheelControls = function (e) {
                 // check below trivially true on every single scroll event, spuriously firing
                 // loadDown() over and over on plain horizontal scrolling. Only run the vertical
                 // lazy-loading logic when there's actually vertical overflow to scroll through.
-                if (obj.content.scrollHeight > obj.content.clientHeight) {
-                    if (obj.content.scrollTop + obj.content.clientHeight >= obj.content.scrollHeight - 10) {
+
+                // A correction of loadUp/loadDown is reported as a scroll but is not one of the user
+                const corrected = obj.content.scrollTop === obj.lazyLoadingScrollTop;
+
+                if (!corrected && obj.content.scrollHeight > obj.content.clientHeight) {
+                    /**
+                     * Both edges are read against the same margin, which `loadedEdgeMargin` keeps
+                     * under a third of the scrollable range : `scrollTop <= clientHeight` used to
+                     * stand for "near the top" and covered the whole range as soon as the loaded
+                     * window was shorter than two viewports, so the same tick was near the top and
+                     * near the bottom at once and answered with a loadUp and a loadDown that undid
+                     * each other. loadUp/loadDown now also keep the viewport anchored themselves,
+                     * there is no viewport-sized jump left here to land in the opposite band.
+                     */
+                    const edge = loadedEdgeMargin(obj);
+
+                    if (obj.content.scrollTop + obj.content.clientHeight >= obj.content.scrollHeight - edge) {
                         // NOTE: unlike the top edge below, there is no reliable "truly at the end"
                         // signal here — `scrollHeight` only reflects the currently-loaded window
                         // (there's no spacer/placeholder representing not-yet-loaded rows), so
@@ -1564,30 +1579,29 @@ export const wheelControls = function (e) {
                         // to force-snap to the last page here fired constantly and hijacked normal
                         // scrolling — reverted; this stays as plain incremental loadDown().
                         if (loadDown.call(obj)) {
-                            if (obj.content.scrollTop + obj.content.clientHeight > obj.content.scrollHeight - 10) {
-                                obj.content.scrollTop = obj.content.scrollTop - obj.content.clientHeight;
-                            }
                             updateHighlightBorder.call(obj);
                             updateCornerPosition.call(obj);
                             updateHighlightCopy.call(obj);
                         }
-                    } else if (obj.content.scrollTop <= obj.content.clientHeight) {
+                    } else if (obj.content.scrollTop <= edge) {
                         // Same reasoning, mirrored for the top: scrollTop can already read 0 while the
                         // loaded window is still stuck deep in the list (`firstNonFrozenChild` accounts
-                        // for freezeRows, which always occupy the physical front of tbody).
-                        const firstLoaded = firstNonFrozenChild(obj);
-                        if (obj.content.scrollTop === 0 && parseInt(firstLoaded?.getAttribute('data-y')) !== (obj.options.freezeRows || 0)) {
-                            loadPage.call(obj, 0);
+                        // for freezeRows, which always occupy the physical front of tbody). Loading the
+                        // rows just above is always preferred, snapping back to the first page is the
+                        // fallback for when there is nothing left to insert yet the window is not at
+                        // the head of the list.
+                        if (loadUp.call(obj)) {
                             updateHighlightBorder.call(obj);
                             updateCornerPosition.call(obj);
                             updateHighlightCopy.call(obj);
-                        } else if (loadUp.call(obj)) {
-                            if (obj.content.scrollTop < 10) {
-                                obj.content.scrollTop = obj.content.scrollTop + obj.content.clientHeight;
+                        } else {
+                            const firstLoaded = firstNonFrozenChild(obj);
+                            if (obj.content.scrollTop === 0 && parseInt(firstLoaded?.getAttribute('data-y')) !== (obj.options.freezeRows || 0)) {
+                                loadPage.call(obj, 0);
+                                updateHighlightBorder.call(obj);
+                                updateCornerPosition.call(obj);
+                                updateHighlightCopy.call(obj);
                             }
-                            updateHighlightBorder.call(obj);
-                            updateCornerPosition.call(obj);
-                            updateHighlightCopy.call(obj);
                         }
                     }
                 }
