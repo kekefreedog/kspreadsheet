@@ -717,13 +717,10 @@ export const copyData = function (o, d) {
 
                 // Value
                 let value = data[posy][posx];
+                const columnType = (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type) || obj.options.defaultCellType;
 
                 if (value && !data[1] && obj.parent.config.autoIncrement != false) {
-                    if (
-                        obj.options.columns &&
-                        obj.options.columns[i] &&
-                        (!obj.options.columns[i].type || obj.options.columns[i].type == 'text' || obj.options.columns[i].type == 'number')
-                    ) {
+                    if (!columnType || columnType == 'text' || columnType == 'number') {
                         if (('' + value).substr(0, 1) == '=') {
                             const tokens = value.match(/([A-Z]+[0-9]+)/g);
 
@@ -752,7 +749,7 @@ export const copyData = function (o, d) {
                                 value = Number(value) + rowNumber;
                             }
                         }
-                    } else if (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type == 'calendar') {
+                    } else if (columnType == 'calendar') {
                         const date = new Date(value);
                         date.setDate(date.getDate() + rowNumber);
                         value =

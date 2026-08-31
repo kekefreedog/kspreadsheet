@@ -107,7 +107,8 @@ export const copy = function (highlighted, delimiter, returnData, includeHeaders
                 // Labels
                 let label;
 
-                if (obj.options.columns && obj.options.columns[i] && (obj.options.columns[i].type == 'checkbox' || obj.options.columns[i].type == 'radio')) {
+                const colType = (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type) || obj.options.defaultCellType;
+                if (colType == 'checkbox' || colType == 'radio') {
                     label = value;
                 } else {
                     label = obj.records[j][i].element.innerHTML;

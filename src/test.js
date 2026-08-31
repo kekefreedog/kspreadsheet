@@ -308,7 +308,7 @@ const scenarios = [
     },
     {
         name: 'Default cell type: checkbox',
-        check: 'A 10x10 grid appears where every cell renders as a checkbox. Click a few to toggle them.',
+        check: 'A 10x10 grid appears where every cell renders as a checkbox. Check one cell, copy it, then paste it into another cell: the destination must also be checked. Then drag the fill handle from that checked cell horizontally AND vertically: every filled destination must stay checked. Repeat with an unchecked cell; copied and filled cells must stay unchecked.',
         render() {
             return jspreadsheet(root, {
                 worksheets: [{ minDimensions: [10, 10], defaultCellType: 'checkbox' }],
@@ -583,6 +583,54 @@ const scenarios = [
             });
 
             extra.append(zoomInEl, zoomOutEl, zoomDefault, zoomGet);
+
+            return instance;
+        },
+    },
+    {
+        name: 'Search controls',
+        check: 'The grid initially shows all four rows. Click Search apples: only the two matching rows remain and the status reads "apple". Type a different query in the built-in Search field, then click Get Search: the status and console must show exactly what you typed. Click Reset Search: all rows return and the status becomes an empty string.',
+        render() {
+            const instance = jspreadsheet(root, {
+                worksheets: [
+                    {
+                        search: true,
+                        data: [
+                            ['Apple', 'Fruit'],
+                            ['Banana', 'Fruit'],
+                            ['Green apple', 'Fruit'],
+                            ['Carrot', 'Vegetable'],
+                        ],
+                        columns: [{ title: 'Item' }, { title: 'Category' }],
+                    },
+                ],
+            });
+
+            const searchEl = document.createElement('button');
+            searchEl.innerText = 'Search apples';
+            searchEl.addEventListener('click', () => {
+                for (const worksheet of instance) worksheet.search('apple');
+                statusEl.textContent = `getSearch(): "${instance[0].getSearch()}"`;
+            });
+
+            const getSearchEl = document.createElement('button');
+            getSearchEl.innerText = 'Get Search';
+            getSearchEl.addEventListener('click', () => {
+                const query = instance[0].getSearch();
+                console.log('getSearch()', query);
+                statusEl.textContent = `getSearch(): "${query}"`;
+            });
+
+            const resetSearchEl = document.createElement('button');
+            resetSearchEl.innerText = 'Reset Search';
+            resetSearchEl.addEventListener('click', () => {
+                for (const worksheet of instance) worksheet.resetSearch();
+                statusEl.textContent = `getSearch(): "${instance[0].getSearch()}"`;
+            });
+
+            const statusEl = document.createElement('output');
+            statusEl.textContent = 'getSearch(): ""';
+            extra.append(searchEl, getSearchEl, resetSearchEl, statusEl);
 
             return instance;
         },

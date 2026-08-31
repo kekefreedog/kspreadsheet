@@ -32,7 +32,7 @@ import {
 } from './selection.js';
 import { deleteRow, getHeight, getRowData, hideRow, insertRow, moveRow, setHeight, setRowData, showRow } from './rows.js';
 import { destroyMerge, getMerge, removeMerge, setMerge } from './merges.js';
-import { resetSearch, search } from './search.js';
+import { getSearch, resetSearch, search } from './search.js';
 import { getHeader, getHeaders, setHeader, setHeaders } from './headers.js';
 import { getZoom, resetZoom, setZoom, zoomIn, zoomOut } from './zoom.js';
 import { getFooters, setFooter, setFooters } from './footer.js';
@@ -730,6 +730,7 @@ const worksheetPublicMethods = [
         },
     ],
     ['search', search],
+    ['getSearch', getSearch],
     ['resetSearch', resetSearch],
     ['getHeader', getHeader],
     ['getHeaders', getHeaders],

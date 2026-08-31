@@ -72,6 +72,15 @@ export const search = function (query) {
 };
 
 /**
+ * Get the current search query.
+ *
+ * @return string
+ */
+export const getSearch = function () {
+    return this.searchInput.value;
+};
+
+/**
  * Reset search
  */
 export const resetSearch = function () {

@@ -361,6 +361,12 @@ declare namespace jspreadsheet {
 
     interface SpreadsheetOptions {
         /**
+         * Initial zoom level for worksheets, expressed as a percentage.
+         * @default 100
+         */
+        defaultZoom?: number;
+
+        /**
          * Show or not the "about" item in the context menu.
          * @default true
          */
@@ -1041,6 +1047,12 @@ declare namespace jspreadsheet {
         defaultRowHeight?: number;
 
         /**
+         * Initial zoom level, expressed as a percentage.
+         * @default 100
+         */
+        defaultZoom?: number;
+
+        /**
          * Allow table edition.
          * @default true
          */
@@ -1684,6 +1696,11 @@ declare namespace jspreadsheet {
         getRange: () => string;
 
         /**
+         * Get the current search query. Returns an empty string when no search is active.
+         */
+        getSearch: () => string;
+
+        /**
          * Get data from a row by its index.
          * @param rowNumber - Row index.
          * @param processed - If true, the return is constructed using the innerHTML of the cells. Otherwise, it is constructed using the {@link WorksheetOptions.data} property. Default: false.
@@ -1746,6 +1763,11 @@ declare namespace jspreadsheet {
          * @param column - Index of the column. If omitted, returns the widths of all columns.
          */
         getWidth: (column?: number) => number | (number | string)[];
+
+        /**
+         * Get the current zoom level as a percentage.
+         */
+        getZoom: () => number;
 
         /**
          * Get the index of the currently active worksheet
@@ -1983,6 +2005,11 @@ declare namespace jspreadsheet {
         resetSearch: () => void;
 
         /**
+         * Reset zoom to the configured default level, or 100% when none is configured.
+         */
+        resetZoom: () => void;
+
+        /**
          * Reset highlighted cell selection.
          * @returns If there were highlighted cells, it returns 1, otherwise it returns 0.
          */
@@ -2190,6 +2217,12 @@ declare namespace jspreadsheet {
         setWidth(column: number[], width: number | number[]): void;
 
         /**
+         * Set the zoom level as a percentage. Values outside 25%–400% are ignored.
+         * @returns The current zoom level.
+         */
+        setZoom: (zoomValue: number) => number;
+
+        /**
          * Show hidden column.
          * @param colNumber - Column index.
          */
@@ -2257,6 +2290,18 @@ declare namespace jspreadsheet {
          * @param cell - Row index.
          */
         whichPage: (cell: number) => number;
+
+        /**
+         * Increase the zoom level by one step.
+         * @returns The current zoom level.
+         */
+        zoomIn: () => number;
+
+        /**
+         * Decrease the zoom level by one step.
+         * @returns The current zoom level.
+         */
+        zoomOut: () => number;
     }
 
     type Version = () => {

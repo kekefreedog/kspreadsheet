@@ -4,53 +4,53 @@ name: Publish to npm
 # Flow: tag push -> install -> verify tag matches package.json -> build ->
 # test -> npm publish (authenticated with the NPM_TOKEN repo secret).
 on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch: {} # allow manual runs from the Actions tab
+    push:
+        tags:
+            - 'v*'
+    workflow_dispatch: {} # allow manual runs from the Actions tab
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    publish:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          # Configures ~/.npmrc so `npm publish` authenticates via NODE_AUTH_TOKEN.
-          registry-url: 'https://registry.npmjs.org'
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  # Configures ~/.npmrc so `npm publish` authenticates via NODE_AUTH_TOKEN.
+                  registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
-        # package-lock.json is gitignored in this repo, so `npm ci` can't be used.
-        run: npm install
+            - name: Install dependencies
+              # package-lock.json is gitignored in this repo, so `npm ci` can't be used.
+              run: npm install
 
-      - name: Verify tag matches package.json version
-        # Guard against publishing the wrong version: the pushed tag (e.g. v2.4.1)
-        # must equal "v<version>" from package.json. Skipped on manual dispatch.
-        if: github.ref_type == 'tag'
-        run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
-          if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${PKG_VERSION}"
-            exit 1
-          fi
-          echo "Version OK: ${PKG_VERSION}"
+            - name: Verify tag matches package.json version
+              # Guard against publishing the wrong version: the pushed tag (e.g. v2.4.1)
+              # must equal "v<version>" from package.json. Skipped on manual dispatch.
+              if: github.ref_type == 'tag'
+              run: |
+                  PKG_VERSION="v$(node -p "require('./package.json').version")"
+                  if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
+                    echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${PKG_VERSION}"
+                    exit 1
+                  fi
+                  echo "Version OK: ${PKG_VERSION}"
 
-      - name: Build dist (JS + CSS)
-        # Tests require ../dist/index.js, so build before testing. This is the
-        # same command prepublishOnly runs, so the tested artifact is what ships.
-        run: npm run dist
+            - name: Build dist (JS + CSS)
+              # Tests require ../dist/index.js, so build before testing. This is the
+              # same command prepublishOnly runs, so the tested artifact is what ships.
+              run: npm run dist
 
-      - name: Run tests
-        run: npx mocha --recursive --require=mocha.config.js
+            - name: Run tests
+              run: npx mocha --recursive --require=mocha.config.js
 
-      - name: Publish to npm
-        # prepublishOnly rebuilds dist once more, guaranteeing a fresh artifact.
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            - name: Publish to npm
+              # prepublishOnly rebuilds dist once more, guaranteeing a fresh artifact.
+              run: npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

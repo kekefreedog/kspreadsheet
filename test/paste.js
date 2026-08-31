@@ -12,6 +12,27 @@ const fixtureData = () => [
 ];
 
 describe('Paste', () => {
+    it('preserves checked default checkbox values when copied and pasted', () => {
+        const sheet = jspreadsheet(root, {
+            worksheets: [
+                {
+                    data: [[true, false]],
+                    defaultCellType: 'checkbox',
+                },
+            ],
+        })[0];
+
+        sheet.updateSelectionFromCoords(0, 0, 0, 0);
+        sheet.copy();
+        const clipboardValue = sheet.textarea.value;
+
+        sheet.updateSelectionFromCoords(1, 0, 1, 0);
+        sheet.paste(1, 0, clipboardValue);
+
+        expect(sheet.getValue('B1')).to.equal(true);
+        expect(sheet.getCell('B1').children[0].checked).to.equal(true);
+    });
+
     it('no expand', () => {
         let sheet = jspreadsheet(root, {
             worksheets: [
