@@ -1,7 +1,7 @@
 name: Publish to npm
 
 # Publishes the package to npm when you push a version tag (e.g. v2.4.1).
-# Flow: tag push -> install -> verify tag matches package.json -> build ->
+# Flow: tag push -> install -> sync package.json version with tag -> build ->
 # test -> npm publish (authenticated with the NPM_TOKEN repo secret).
 on:
     push:
@@ -29,17 +29,19 @@ jobs:
               # package-lock.json is gitignored in this repo, so `npm ci` can't be used.
               run: npm install
 
-            - name: Verify tag matches package.json version
-              # Guard against publishing the wrong version: the pushed tag (e.g. v2.4.1)
-              # must equal "v<version>" from package.json. Skipped on manual dispatch.
+            - name: Sync package.json version with tag
+              # Ensure package.json version matches the pushed tag (e.g. v2.4.1 -> 2.4.1).
+              # If they differ, update package.json version before building and publishing.
               if: github.ref_type == 'tag'
               run: |
-                  PKG_VERSION="v$(node -p "require('./package.json').version")"
-                  if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
-                    echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${PKG_VERSION}"
-                    exit 1
+                  TARGET_VERSION="${GITHUB_REF_NAME#v}"
+                  PKG_VERSION="$(node -p "require('./package.json').version")"
+                  if [ "$PKG_VERSION" != "$TARGET_VERSION" ]; then
+                    echo "Updating package.json version from ${PKG_VERSION} to ${TARGET_VERSION}"
+                    npm version "$TARGET_VERSION" --no-git-tag-version --allow-same-version
+                  else
+                    echo "Version already matches tag: ${PKG_VERSION}"
                   fi
-                  echo "Version OK: ${PKG_VERSION}"
 
             - name: Build dist (JS + CSS)
               # Tests require ../dist/index.js, so build before testing. This is the

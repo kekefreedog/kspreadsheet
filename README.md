@@ -132,6 +132,11 @@ Serve your html file and then you will get the rendered table in your browser
 
 ## Jspreadsheet Changelog
 
+### Custom 2.5.0
+
+-   Implement method `getSearch` to get search value stored
+-   Improve checkbox spread
+
 ### Custom 2.4.0
 
 -   Add `freezeRows` option to pin the first N rows in place (mirrors `freezeColumns`), including support for `freezeRows` and `freezeColumns` combined at the same time;
