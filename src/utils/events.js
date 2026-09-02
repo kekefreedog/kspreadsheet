@@ -69,7 +69,7 @@ const mouseUpControls = function (e) {
                 );
                 // Columns
                 const columns = libraryBase.jspreadsheet.current.getSelectedColumns();
-                if (columns.length > 1) {
+                if (columns.length > 1 && columns.indexOf(parseInt(libraryBase.jspreadsheet.current.resizing.column)) !== -1) {
                     const currentWidth = [];
                     for (let i = 0; i < columns.length; i++) {
                         currentWidth.push(parseInt(libraryBase.jspreadsheet.current.cols[columns[i]].colElement.getAttribute('width')));
@@ -97,12 +97,25 @@ const mouseUpControls = function (e) {
                 // Remove Class
                 libraryBase.jspreadsheet.current.rows[libraryBase.jspreadsheet.current.resizing.row].element.children[0].classList.remove('resizing');
                 let newHeight = libraryBase.jspreadsheet.current.rows[libraryBase.jspreadsheet.current.resizing.row].element.getAttribute('height');
-                setHeight.call(
-                    libraryBase.jspreadsheet.current,
-                    libraryBase.jspreadsheet.current.resizing.row,
-                    newHeight,
-                    libraryBase.jspreadsheet.current.resizing.height
-                );
+                // Rows
+                const rows = libraryBase.jspreadsheet.current.getSelectedRows();
+                if (rows.length > 1 && rows.indexOf(parseInt(libraryBase.jspreadsheet.current.resizing.row)) !== -1) {
+                    const currentHeight = [];
+                    for (let i = 0; i < rows.length; i++) {
+                        currentHeight.push(parseInt(libraryBase.jspreadsheet.current.rows[rows[i]].element.getAttribute('height')));
+                    }
+                    // Previous height
+                    const index = rows.indexOf(parseInt(libraryBase.jspreadsheet.current.resizing.row));
+                    currentHeight[index] = libraryBase.jspreadsheet.current.resizing.height;
+                    setHeight.call(libraryBase.jspreadsheet.current, rows, newHeight, currentHeight);
+                } else {
+                    setHeight.call(
+                        libraryBase.jspreadsheet.current,
+                        parseInt(libraryBase.jspreadsheet.current.resizing.row),
+                        newHeight,
+                        libraryBase.jspreadsheet.current.resizing.height
+                    );
+                }
                 // Remove border
                 libraryBase.jspreadsheet.current.resizing.element.classList.remove('resizing');
             }
@@ -488,6 +501,14 @@ const mouseMoveControls = function (e) {
                         const tempWidth = libraryBase.jspreadsheet.current.resizing.width + width;
                         libraryBase.jspreadsheet.current.cols[libraryBase.jspreadsheet.current.resizing.column].colElement.setAttribute('width', tempWidth);
 
+                        // Live-preview the same width on every other selected column while dragging
+                        const columns = libraryBase.jspreadsheet.current.getSelectedColumns();
+                        if (columns.length > 1 && columns.indexOf(parseInt(libraryBase.jspreadsheet.current.resizing.column)) !== -1) {
+                            for (let i = 0; i < columns.length; i++) {
+                                libraryBase.jspreadsheet.current.cols[columns[i]].colElement.setAttribute('width', tempWidth);
+                            }
+                        }
+
                         updateHighlightBorder.call(libraryBase.jspreadsheet.current);
                         updateCornerPosition.call(libraryBase.jspreadsheet.current);
                         updateHighlightCopy.call(libraryBase.jspreadsheet.current);
@@ -498,6 +519,14 @@ const mouseMoveControls = function (e) {
                     if (libraryBase.jspreadsheet.current.resizing.height + height > 0) {
                         const tempHeight = libraryBase.jspreadsheet.current.resizing.height + height;
                         libraryBase.jspreadsheet.current.rows[libraryBase.jspreadsheet.current.resizing.row].element.setAttribute('height', tempHeight);
+
+                        // Live-preview the same height on every other selected row while dragging
+                        const rows = libraryBase.jspreadsheet.current.getSelectedRows();
+                        if (rows.length > 1 && rows.indexOf(parseInt(libraryBase.jspreadsheet.current.resizing.row)) !== -1) {
+                            for (let i = 0; i < rows.length; i++) {
+                                libraryBase.jspreadsheet.current.rows[rows[i]].element.setAttribute('height', tempHeight);
+                            }
+                        }
 
                         updateHighlightBorder.call(libraryBase.jspreadsheet.current);
                         updateCornerPosition.call(libraryBase.jspreadsheet.current);

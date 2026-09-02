@@ -208,6 +208,17 @@
     position: relative;
 }
 
+/*
+ * `.jss_image_cell`'s own `position: relative` above has higher specificity than the generic
+ * `.jss_freezed`/`.jss_row_freezed` sticky rule, so a frozen image cell needs its own override
+ * here to actually stick (same fix pattern as the row-number cell override further below).
+ */
+.jss_worksheet > tbody > tr > td.jss_image_cell.jss_freezed,
+.jss_worksheet > tbody > tr > td.jss_image_cell.jss_row_freezed {
+    position: -webkit-sticky;
+    position: sticky;
+}
+
 .jss_worksheet > tbody > tr > td > img,
 .jss_worksheet > tbody > tr > td > img.jss_image {
     display: block;

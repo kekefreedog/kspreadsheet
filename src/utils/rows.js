@@ -514,32 +514,60 @@ export const getHeight = function (row) {
 export const setHeight = function (row, height, oldHeight) {
     const obj = this;
 
-    if (height > 0) {
-        // Oldwidth
-        if (!oldHeight) {
-            oldHeight = obj.rows[row].element.getAttribute('height');
-
+    if (height) {
+        if (Array.isArray(row)) {
+            // Oldheight
             if (!oldHeight) {
-                const rect = obj.rows[row].element.getBoundingClientRect();
-                oldHeight = rect.height;
+                oldHeight = [];
             }
+            // Set height
+            for (let i = 0; i < row.length; i++) {
+                if (!oldHeight[i]) {
+                    oldHeight[i] = parseInt(obj.rows[row[i]].element.getAttribute('height'));
+
+                    if (!oldHeight[i]) {
+                        oldHeight[i] = obj.rows[row[i]].element.getBoundingClientRect().height;
+                    }
+                }
+                const h = parseInt(Array.isArray(height) && height[i] ? height[i] : height);
+                obj.rows[row[i]].element.style.height = h + 'px';
+
+                if (!obj.options.rows) {
+                    obj.options.rows = [];
+                }
+
+                if (!obj.options.rows[row[i]]) {
+                    obj.options.rows[row[i]] = {};
+                }
+                obj.options.rows[row[i]].height = h;
+            }
+        } else {
+            // Oldheight
+            if (!oldHeight) {
+                oldHeight = obj.rows[row].element.getAttribute('height');
+
+                if (!oldHeight) {
+                    const rect = obj.rows[row].element.getBoundingClientRect();
+                    oldHeight = rect.height;
+                }
+            }
+
+            // Integer
+            height = parseInt(height);
+
+            // Set height
+            obj.rows[row].element.style.height = height + 'px';
+
+            if (!obj.options.rows) {
+                obj.options.rows = [];
+            }
+
+            // Keep options updated
+            if (!obj.options.rows[row]) {
+                obj.options.rows[row] = {};
+            }
+            obj.options.rows[row].height = height;
         }
-
-        // Integer
-        height = parseInt(height);
-
-        // Set width
-        obj.rows[row].element.style.height = height + 'px';
-
-        if (!obj.options.rows) {
-            obj.options.rows = [];
-        }
-
-        // Keep options updated
-        if (!obj.options.rows[row]) {
-            obj.options.rows[row] = {};
-        }
-        obj.options.rows[row].height = height;
 
         // Keeping history of changes
         setHistory.call(obj, {
