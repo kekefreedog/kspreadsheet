@@ -240,6 +240,44 @@ describe('Freeze columns and rows', () => {
         expect(cornerImageCell.style.top).to.not.equal('');
     });
 
+    it('freezeColumns pins an image-type column the same way as any other frozen column', () => {
+        const instance = jspreadsheet(root, {
+            worksheets: [
+                {
+                    minDimensions: [3, 3],
+                    data: [
+                        [PIXEL, 2, 3],
+                        [PIXEL, 7, 8],
+                        [PIXEL, 12, 13],
+                    ],
+                    columns: [{ type: 'image' }, { type: 'text' }, { type: 'text' }],
+                    freezeColumns: 1,
+                },
+            ],
+        });
+
+        const worksheet = instance[0];
+
+        // Header of the frozen image column is pinned like any other frozen header
+        expect(worksheet.headers[0].classList.contains('jss_freezed')).to.equal(true);
+        expect(worksheet.headers[0].style.left).to.equal('0px');
+
+        // Every body cell in the frozen image column is pinned, row is not frozen (no freezeRows)
+        for (let row = 0; row < worksheet.records.length; row++) {
+            const imageCell = worksheet.records[row][0].element;
+
+            expect(imageCell.classList.contains('jss_image_cell')).to.equal(true);
+            expect(imageCell.classList.contains('jss_freezed')).to.equal(true);
+            expect(imageCell.classList.contains('jss_row_freezed')).to.equal(false);
+            expect(imageCell.style.left).to.equal('0px');
+            expect(imageCell.querySelector('img')).to.not.equal(null);
+        }
+
+        // The following, non-frozen text column is left alone
+        expect(worksheet.headers[1].classList.contains('jss_freezed')).to.equal(false);
+        expect(worksheet.records[0][1].element.classList.contains('jss_freezed')).to.equal(false);
+    });
+
     it('actually keeps a frozen image cell sticky in CSS instead of losing to the image-cell position:relative rule', () => {
         // Regression test for a real-browser cascade bug: `.jss_image_cell` sets
         // `position: relative` (needed so the absolutely-positioned <img> sizes against the
@@ -275,5 +313,49 @@ describe('Freeze columns and rows', () => {
 
         expect(() => worksheet.setHeight(0, 40)).to.not.throw();
         expect(worksheet.records[0][0].element.classList.contains('jss_row_freezed')).to.equal(true);
+    });
+
+    it('a selection entirely inside frozen rows (non-frozen columns) still gets a visible border', () => {
+        // Regression test: the selection overlay (`jss_border_main` div) is clipped away
+        // entirely wherever it would sit over a frozen row (see getFrozenClipTop in
+        // selection.js), so cells inside the frozen band rely on legacy per-cell CSS
+        // (`.highlight-top`/`-bottom`/`-left`/`-right`) for a visible border instead. That
+        // fallback only had `.jss_freezed` (frozen columns) selectors - `.jss_row_freezed`
+        // (frozen rows) selectors were missing, so a selection made entirely inside frozen
+        // rows over non-frozen columns had no visible border at all.
+        const instance = jspreadsheet(root, {
+            worksheets: [
+                {
+                    minDimensions: [7, 5],
+                    data: [
+                        [1, 2, 3, 4, 5, 6, 7],
+                        [8, 9, 10, 11, 12, 13, 14],
+                        [15, 16, 17, 18, 19, 20, 21],
+                    ],
+                    freezeRows: 2,
+                },
+            ],
+        });
+
+        const worksheet = instance[0];
+
+        // F1:G2 - columns 5,6 (F,G) are not frozen, rows 0,1 are
+        worksheet.updateSelectionFromCoords(5, 0, 6, 1);
+
+        for (let row = 0; row <= 1; row++) {
+            for (let col = 5; col <= 6; col++) {
+                const cell = worksheet.records[row][col].element;
+                expect(cell.classList.contains('jss_row_freezed'), `row ${row} col ${col}`).to.equal(true);
+                expect(cell.classList.contains('jss_freezed'), `row ${row} col ${col}`).to.equal(false);
+                expect(cell.classList.contains('highlight'), `row ${row} col ${col}`).to.equal(true);
+            }
+        }
+
+        // The stylesheet must have a `.jss_row_freezed.highlight*` fallback for every edge,
+        // mirroring the `.jss_freezed.highlight*` ones, so these cells actually render a border
+        for (const suffix of ['', '-top', '-bottom', '-left', '-right']) {
+            const re = new RegExp(`\\.jss_row_freezed\\.highlight${suffix}\\s*[,{]`);
+            expect(JSPREADSHEET_CSS, `missing .jss_row_freezed.highlight${suffix} rule`).to.match(re);
+        }
     });
 });

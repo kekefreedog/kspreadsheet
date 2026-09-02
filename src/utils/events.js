@@ -21,6 +21,7 @@ import { openFilter } from './filter.js';
 import { firstNonFrozenChild, loadDown, loadedEdgeMargin, loadPage, loadUp } from './lazyLoading.js';
 import { setWidth } from './columns.js';
 import { moveRow, setHeight } from './rows.js';
+import { updateFrozenColumnOffsets, updateFrozenRowOffsets } from './freeze.js';
 import version from './version.js';
 import { getCellNameFromCoords } from './helpers.js';
 
@@ -509,6 +510,10 @@ const mouseMoveControls = function (e) {
                             }
                         }
 
+                        // Keep frozen column offsets in sync while dragging, otherwise later
+                        // frozen columns keep their stale offset until the drag ends
+                        updateFrozenColumnOffsets.call(libraryBase.jspreadsheet.current);
+
                         updateHighlightBorder.call(libraryBase.jspreadsheet.current);
                         updateCornerPosition.call(libraryBase.jspreadsheet.current);
                         updateHighlightCopy.call(libraryBase.jspreadsheet.current);
@@ -527,6 +532,10 @@ const mouseMoveControls = function (e) {
                                 libraryBase.jspreadsheet.current.rows[rows[i]].element.setAttribute('height', tempHeight);
                             }
                         }
+
+                        // Keep frozen row offsets in sync while dragging, otherwise later
+                        // frozen rows keep their stale offset until the drag ends
+                        updateFrozenRowOffsets.call(libraryBase.jspreadsheet.current);
 
                         updateHighlightBorder.call(libraryBase.jspreadsheet.current);
                         updateCornerPosition.call(libraryBase.jspreadsheet.current);
