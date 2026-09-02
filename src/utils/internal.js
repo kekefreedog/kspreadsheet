@@ -379,6 +379,38 @@ const validDate = function (date) {
 };
 
 /**
+ * Render an image cell.
+ *
+ * columnOptions (column.options for an `image` type column):
+ * - fit: how the image should be sized inside the cell: 'fit' (contain, keep ratio, default),
+ *   'fill' (cover, keep ratio, crops overflow) or 'none' (natural size, no scaling).
+ * - backgroundColor: background color applied behind the image (visible as letterboxing
+ *   when fit is 'fit', or behind transparent images).
+ */
+// data:image URIs, absolute http(s) URLs, protocol-relative (//host/...) and root-relative (/path) URLs.
+const imageSourcePattern = /^(data:image\/|https?:\/\/|\/\/|\/)/i;
+
+const isImageSource = function (value) {
+    return !!value && imageSourcePattern.test('' + value);
+};
+
+const renderImage = function (td, value, columnOptions) {
+    td.classList.add('jss_image_cell');
+    td.innerHTML = '';
+    if (isImageSource(value)) {
+        const fit = (columnOptions && columnOptions.fit) || 'fit';
+        const img = document.createElement('img');
+        img.className = 'jss_image';
+        img.src = value;
+        img.style.objectFit = fit == 'fill' ? 'cover' : fit == 'none' ? 'none' : 'contain';
+        if (columnOptions && columnOptions.backgroundColor) {
+            img.style.backgroundColor = columnOptions.backgroundColor;
+        }
+        td.appendChild(img);
+    }
+};
+
+/**
  * Strip tags
  */
 const stripScript = function (a) {
@@ -477,11 +509,7 @@ export const createCell = function (i, j, value) {
                 td.textContent = value;
             }
         } else if (colType == 'image') {
-            if (value && value.substr(0, 10) == 'data:image') {
-                const img = document.createElement('img');
-                img.src = value;
-                td.appendChild(img);
-            }
+            renderImage(td, value, obj.options.columns && obj.options.columns[i] && obj.options.columns[i].options);
         } else {
             if (colType == 'html') {
                 td.innerHTML = stripScript(parseValue.call(this, i, j, value, td));
@@ -660,12 +688,7 @@ export const updateCell = function (x, y, value, force) {
             } else if (updateColType == 'image') {
                 value = '' + value;
                 obj.options.data[y][x] = value;
-                obj.records[y][x].element.innerHTML = '';
-                if (value && value.substr(0, 10) == 'data:image') {
-                    const img = document.createElement('img');
-                    img.src = value;
-                    obj.records[y][x].element.appendChild(img);
-                }
+                renderImage(obj.records[y][x].element, value, obj.options.columns[x] && obj.options.columns[x].options);
             } else {
                 // Update data and cell
                 obj.options.data[y][x] = value;

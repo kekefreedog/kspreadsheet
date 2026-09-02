@@ -14,7 +14,7 @@ window.jss = jspreadsheet;
  * and can be exported as JSON/Markdown at the end.
  */
 
-const STORAGE_KEY = 'kspreadsheet_manual_qa_v12_reprooffset';
+const STORAGE_KEY = 'kspreadsheet_manual_qa_v13_imagetype';
 
 const root = document.getElementById('root');
 
@@ -216,7 +216,7 @@ const scenarios = [
     },
     {
         name: 'Freeze columns + nested headers + copy selection',
-        check: '40x20 grid, 2 frozen columns, two-level nested headers ("Supermarket information" spanning cols A-B). Select a range spanning frozen + non-frozen columns, copy it (Ctrl/Cmd+C) — the marching-ants copy outline should render correctly without covering the frozen columns oddly. NEW: the row-number column must stay visible/pinned during horizontal scroll, including in the nested-header corner.',
+        check: '40x20 grid, 2 frozen columns, two-level nested headers ("Supermarket information" spanning cols A-B). Select a range spanning frozen + non-frozen columns, copy it (Ctrl/Cmd+C) — the marching-ants copy outline should render correctly without covering the frozen columns oddly. NEW: the row-number column must stay visible/pinned during horizontal scroll, including in the nested-header corner. NEW: a footer row ("Total" + a SUM formula under column B) must appear at the bottom, aligned with its columns, and stay put (not scroll away) when scrolling horizontally.',
         render() {
             return jspreadsheet(root, {
                 worksheets: [
@@ -239,6 +239,7 @@ const scenarios = [
                                 { title: ' Other Information', colspan: '35' },
                             ],
                         ],
+                        footers: [['Total', '=SUM(B1:B20)']],
                     },
                 ],
             });
@@ -316,9 +317,94 @@ const scenarios = [
         },
     },
     {
-        name: 'Download XLSX',
-        check: 'A grid with named columns (Nom, Date, Projet, Tache, etc.) appears, plus a "Download XLSX" button. Click it — an .xlsx file should download without console errors.',
+        name: 'Image column type',
+        check: 'Grid 1: column B is type "image". Row 1 red square (data:image), row 2 blue square (data:image), row 3 is "not-an-image" text (should render blank, no broken image icon). Click "Set image on row 3" — a real photo loaded from a plain https:// URL (picsum.photos) should appear, proving image columns accept regular image URLs, not just data:image. The image must sit flush against the cell border, no padding gap. Click "Download XLSX (Grid 1)" and open the file: rows 1-2 must show real embedded images (not base64 text), row 3 must show the plain text "not-an-image" (never an attempt at an image). Grid 2: three SQUARE cells (200x200), all fed a WIDE 400x200 landscape photo except "none" which gets a small 80x60 thumbnail (smaller than the cell, on purpose). "fit" (contain) must show the WHOLE landscape photo, letterboxed with pink showing above and below it. "fill" (cover) must show the photo zoomed in, filling the entire square with NO pink visible (it should look visibly more zoomed-in / cropped on the sides than "fit"). "none" must show the small thumbnail at its real tiny size, centered, with pink filling all the space around it. Confirm the three are visibly different from each other. Click "Download XLSX (Grid 2)" and open the file: each of the 3 columns should show a real embedded image (fit/fill both the wide photo, none the small thumbnail), not URL text.',
         render() {
+            const RED = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFElEQVR42mP8z8BQz0AEYBxVSF+FABJmAwEd1s0zAAAAAElFTkSuQmCC';
+            const BLUE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFElEQVR42mNk+M9Qz0AEYBxVSF+FABe6AwF7YSbaAAAAAElFTkSuQmCC';
+            const PHOTO_URL = 'https://picsum.photos/seed/kspreadsheet/400/200';
+            const THUMB_URL = 'https://picsum.photos/seed/kspreadsheet-thumb/80/60';
+
+            const instance = jspreadsheet(root, {
+                worksheets: [
+                    {
+                        minDimensions: [2, 3],
+                        data: [
+                            ['Row 1', RED],
+                            ['Row 2', BLUE],
+                            ['Row 3', 'not-an-image'],
+                        ],
+                        columns: [
+                            { type: 'text', title: 'Label' },
+                            { type: 'image', title: 'Image' },
+                        ],
+                    },
+                ],
+            });
+
+            const setImageBtn = document.createElement('button');
+            setImageBtn.innerText = 'Set image on row 3 (URL)';
+            setImageBtn.addEventListener('click', () => {
+                for (const worksheet of instance) worksheet.setValue('B3', PHOTO_URL);
+            });
+            extra.appendChild(setImageBtn);
+
+            // Captured now (not read from `instance` in the click handler) since `instance` gets
+            // the fit/fill/none demo worksheets appended to it further down.
+            const grid1Worksheet = instance[0];
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.innerText = 'Download XLSX (Grid 1)';
+            downloadBtn.addEventListener('click', () => {
+                Promise.resolve(grid1Worksheet.download(true, null, 'xlsx')).then(() => console.log('xlsx download done'));
+            });
+            extra.appendChild(downloadBtn);
+
+            // Second grid: square cells so a WIDE (400x200) photo lets 'fit' (contain) and
+            // 'fill' (cover) diverge visibly, while 'none' gets a thumbnail SMALLER than the
+            // cell so its "natural size, letterboxed by backgroundColor" behavior is obvious
+            // instead of just showing a meaningless center-crop of an oversized photo.
+            const fitTitle = document.createElement('div');
+            fitTitle.innerText = 'fit / fill / none (with backgroundColor), image loaded from a URL';
+            fitTitle.style.cssText = 'margin-top: 16px; margin-bottom: 4px;';
+            extra.appendChild(fitTitle);
+
+            const fitMount = document.createElement('div');
+            extra.appendChild(fitMount);
+
+            const fitInstance = jspreadsheet(fitMount, {
+                worksheets: [
+                    {
+                        minDimensions: [3, 1],
+                        defaultRowHeight: 200,
+                        data: [[PHOTO_URL, PHOTO_URL, THUMB_URL]],
+                        columns: [
+                            { type: 'image', title: 'fit', width: 200, options: { fit: 'fit', backgroundColor: '#ffccf2' } },
+                            { type: 'image', title: 'fill', width: 200, options: { fit: 'fill', backgroundColor: '#ffccf2' } },
+                            { type: 'image', title: 'none', width: 200, options: { fit: 'none', backgroundColor: '#ffccf2' } },
+                        ],
+                    },
+                ],
+            });
+            const downloadFitBtn = document.createElement('button');
+            downloadFitBtn.innerText = 'Download XLSX (Grid 2)';
+            downloadFitBtn.addEventListener('click', () => {
+                Promise.resolve(fitInstance[0].download(true, null, 'xlsx')).then(() => console.log('xlsx download done'));
+            });
+            extra.appendChild(downloadFitBtn);
+
+            instance.push(...fitInstance);
+
+            return instance;
+        },
+    },
+    {
+        name: 'Download XLSX',
+        check: 'A grid with named columns (Nom, Date, Projet, Tache, etc.) plus a "Photo" image column appears. Row 1\'s photo is a data:image (base64) avatar, row 2\'s is loaded from a plain https:// URL (picsum.photos). Click "Download XLSX" and open the file in Excel/Numbers/LibreOffice: BOTH photos must appear as real embedded images anchored in the Photo column (not as a giant base64 text blob, not as a bare URL string, no console errors). Also open the downloaded CSV (button below) and confirm the Photo column there just contains the raw base64/URL text (CSV keeps it as plain text, only XLSX embeds it).',
+        render() {
+            const AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFElEQVR42mP8z8BQz0AEYBxVSF+FABJmAwEd1s0zAAAAAElFTkSuQmCC';
+            const PHOTO_URL = 'https://picsum.photos/seed/kspreadsheet-xlsx/200/200';
+
             const instance = jspreadsheet(root, {
                 tabs: true,
                 toolbar: true,
@@ -326,8 +412,13 @@ const scenarios = [
                     {
                         minDimensions: [10, 20],
                         worksheetName: 'Sulivan',
+                        data: [
+                            ['John Doe', AVATAR],
+                            ['Jane Doe', PHOTO_URL],
+                        ],
                         columns: [
                             { type: 'text', name: 'full_name', title: 'Nom', width: 120 },
+                            { type: 'image', name: 'photo', title: 'Photo', width: 80 },
                             { type: 'text', name: '', title: ' ', width: 20 },
                             { type: 'text', name: 'start_date', title: 'Date', width: 120 },
                             { type: 'text', name: 'project_name', title: 'Projet', width: 120 },
@@ -347,9 +438,16 @@ const scenarios = [
             const btn = document.createElement('button');
             btn.innerText = 'Download XLSX';
             btn.addEventListener('click', () => {
-                for (const worksheet of instance) console.log(worksheet.download(true, null, 'xlsx'));
+                for (const worksheet of instance) Promise.resolve(worksheet.download(true, null, 'xlsx')).then((r) => console.log('xlsx download done', r));
             });
-            extra.appendChild(btn);
+
+            const csvBtn = document.createElement('button');
+            csvBtn.innerText = 'Download CSV';
+            csvBtn.addEventListener('click', () => {
+                for (const worksheet of instance) worksheet.download(true, null, 'csv');
+            });
+
+            extra.append(btn, csvBtn);
 
             return instance;
         },

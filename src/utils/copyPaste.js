@@ -108,7 +108,10 @@ export const copy = function (highlighted, delimiter, returnData, includeHeaders
                 let label;
 
                 const colType = (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type) || obj.options.defaultCellType;
-                if (colType == 'checkbox' || colType == 'radio') {
+                if (colType == 'checkbox' || colType == 'radio' || colType == 'image') {
+                    // The rendered cell is an <img> element; the clipboard should carry the raw
+                    // value (data:image/URL) so pasting it back reconstructs the image, not the
+                    // literal `<img src="...">` markup.
                     label = value;
                 } else {
                     label = obj.records[j][i].element.innerHTML;

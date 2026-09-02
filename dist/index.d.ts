@@ -53,6 +53,22 @@ declare namespace jspreadsheet {
         today?: boolean;
     }
 
+    interface ImageOptions {
+        /**
+         * Background color applied behind the image (visible as letterboxing when `fit` is
+         * "fit", or behind transparent images).
+         */
+        backgroundColor?: string;
+
+        /**
+         * How the image should be sized inside the cell: "fit" (contain, keep aspect ratio,
+         * letterboxed), "fill" (cover, keep aspect ratio, crops overflow) or "none" (natural
+         * size, no scaling, clipped by the cell).
+         * @default "fit"
+         */
+        fit?: 'fit' | 'fill' | 'none';
+    }
+
     interface CustomEditor {
         /**
          * Event responsible for closing the editor of a cell with a custom editor.
@@ -195,7 +211,19 @@ declare namespace jspreadsheet {
         render?: 'square';
     }
 
-    type Column = DropdownColumn | CalendarColumn | ColorColumn | BaseColumn;
+    interface ImageColumn extends BaseColumn {
+        /**
+         * Cell values are rendered as an `<img>` when they look like an image source: a
+         * `data:image/...` URI, or an absolute/protocol-relative/root-relative URL
+         * (`https://...`, `//host/...`, `/path`). Any other value renders as a blank cell.
+         */
+        type: 'image';
+
+        /** Image rendering options. */
+        options?: ImageOptions;
+    }
+
+    type Column = DropdownColumn | CalendarColumn | ColorColumn | ImageColumn | BaseColumn;
 
     interface Row {
         /** Row height. */
@@ -1532,11 +1560,19 @@ declare namespace jspreadsheet {
         down: (shiftKey?: boolean, ctrlKey?: boolean) => void;
 
         /**
-         * Get the current data as a CSV file.
+         * Download the current data as a CSV or XLSX file.
+         *
+         * For `type: 'xlsx'`, `image` type columns are embedded as real images (data:image
+         * cells are decoded directly, URL cells are fetched at download time; if a URL fetch
+         * fails, the raw URL is kept as text instead). CSV always keeps the raw cell value
+         * (data:image/URL) as plain text.
          * @param includeHeaders - If true, include the header regardless of the {@link SpreadsheetOptions.includeHeadersOnDownload} property value.
          * @param processed - If true, the result will contain the displayed cell values. Otherwise, the result will contain the actual cell values.
+         * @param type - File format to download.
+         * @default "csv"
+         * @returns A promise that resolves once the file has been generated and the download triggered (only meaningful for `type: 'xlsx'`, which may need to fetch remote images first; the CSV path resolves immediately).
          */
-        download: (includeHeaders?: boolean, processed?: boolean) => void;
+        download: (includeHeaders?: boolean, processed?: boolean, type?: 'csv' | 'xlsx') => Promise<void>;
 
         /**
          * Stores information about the row or column being moved.

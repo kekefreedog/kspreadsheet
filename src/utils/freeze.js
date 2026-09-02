@@ -77,6 +77,17 @@ export const updateFrozenColumnOffsets = function () {
                 obj.records[j][i].element.style.left = width + 'px';
             }
         }
+
+        // Footer cells: td[0] of each <tfoot> row is the row-number placeholder (pinned via
+        // CSS, like the header/body one), so column `i`'s cell is at index i + 1.
+        if (obj.tfoot) {
+            for (const footerRow of obj.tfoot.children) {
+                if (footerRow.children[i + 1]) {
+                    footerRow.children[i + 1].classList.add('jss_freezed');
+                    footerRow.children[i + 1].style.left = width + 'px';
+                }
+            }
+        }
     }
 
     if (Array.isArray(obj.options.nestedHeaders) && obj.options.nestedHeaders.length) {

@@ -371,7 +371,16 @@ export const getData = function (highlighted, processed, delimiter, asJson) {
                     dataset[py] = [];
                 }
                 if (processed) {
-                    dataset[py][px] = obj.records[j][i].element.innerHTML;
+                    // The rendered cell is an <img> element; the "processed" value should be
+                    // the raw source (data:image/URL), not the literal `<img src="...">`
+                    // markup that `.innerHTML` would give here — mirrors the checkbox/radio
+                    // handling right below and the same fix applied to copy() in copyPaste.js.
+                    const colType = (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type) || obj.options.defaultCellType;
+                    if (colType == 'image') {
+                        dataset[py][px] = obj.options.data[j][i];
+                    } else {
+                        dataset[py][px] = obj.records[j][i].element.innerHTML;
+                    }
                 } else {
                     dataset[py][px] = obj.options.data[j][i];
                 }
@@ -420,7 +429,14 @@ export const getDataFromRange = function (range, processed) {
 
         for (let x = coords[0]; x <= coords[2]; x++) {
             if (processed) {
-                dataset[dataset.length - 1].push(obj.records[y][x].element.innerHTML);
+                // Same reasoning as getData() above: an image cell's "processed" value should
+                // be the raw source, not the literal `<img src="...">` markup.
+                const colType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType;
+                if (colType == 'image') {
+                    dataset[dataset.length - 1].push(obj.options.data[y][x]);
+                } else {
+                    dataset[dataset.length - 1].push(obj.records[y][x].element.innerHTML);
+                }
             } else {
                 dataset[dataset.length - 1].push(obj.options.data[y][x]);
             }

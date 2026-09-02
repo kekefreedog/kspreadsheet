@@ -194,9 +194,30 @@
     overflow: hidden;
 }
 
-.jss_worksheet > tbody > tr > td > img {
-    display: inline-block;
-    max-width: 100px;
+/*
+ * `height: 100%` on a plain (static-positioned) <img> does not reliably resolve against a
+ * <td>'s laid-out height across browsers (the CSS percentage-height table-cell exception is
+ * unreliable for replaced elements), which silently falls back to the image's intrinsic
+ * ratio and breaks object-fit ('fit'/'fill'/'none' all end up looking the same). Anchoring the
+ * image with `position: absolute` against the cell (`position: relative`) sizes it against the
+ * cell's actual padding box instead, which is the standard, reliable way to make a replaced
+ * element fill its container.
+ */
+.jss_worksheet > tbody > tr > td.jss_image_cell {
+    padding: 0;
+    position: relative;
+}
+
+.jss_worksheet > tbody > tr > td > img,
+.jss_worksheet > tbody > tr > td > img.jss_image {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .jss_worksheet > tbody > tr > td.readonly {
@@ -687,6 +708,25 @@
     -moz-box-shadow: 2px 0px 2px 0.2px #ccc !important;
 }
 
+/* Unlike thead's <td> (always `position: sticky` for vertical pinning), the footer row has
+   no such base rule since it doesn't stick vertically — so frozen footer cells need their
+   own `position: sticky` to actually pin horizontally during scroll. */
+.jss_worksheet tfoot .jss_freezed {
+    position: -webkit-sticky;
+    position: sticky;
+    background-color: #f3f3f3;
+}
+
+/* Footer's row-number placeholder cell (first child, mirrors thead's) stays pinned during
+   horizontal scroll regardless of freezeColumns, same as the header/body row-number cells. */
+.jss_worksheet > tfoot > tr > td:first-child {
+    position: -webkit-sticky;
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    background-color: #f3f3f3;
+}
+
 .jss_worksheet tbody .jss_freezed,
 .jss_worksheet tbody .jss_row_freezed {
     position: -webkit-sticky;
@@ -741,6 +781,12 @@
     opacity: 0.6;
     box-sizing: border-box;
     z-index: 2;
+    /* Hidden off-screen by default (mirrors .jss_corner) so the overlay never flashes at its
+       in-flow position (as a plain `position: absolute` box with no top/left, it renders
+       right after the table — bottom-left of the grid) before JS ever explicitly positions
+       it. JS only overrides this once there's an actual selection/copy/fill-drag to show. */
+    top: -2000px;
+    left: -2000px;
 }
 
 .jss_border_main {

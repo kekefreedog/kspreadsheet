@@ -111,6 +111,33 @@ describe('Freeze columns and rows', () => {
         }
     });
 
+    it('freezeColumns also pins the footer cells under the frozen columns', () => {
+        const instance = jspreadsheet(root, {
+            worksheets: [
+                {
+                    minDimensions: [5, 5],
+                    data: [
+                        [1, 2, 3, 4, 5],
+                        [6, 7, 8, 9, 10],
+                    ],
+                    freezeColumns: 2,
+                    footers: [['Total', '=SUM(B1:B2)', '', '', '']],
+                },
+            ],
+        });
+
+        const worksheet = instance[0];
+        const footerRow = worksheet.tfoot.children[0];
+
+        // td[0] is the row-number placeholder, td[i + 1] is column i
+        expect(footerRow.children[1].classList.contains('jss_freezed')).to.equal(true);
+        expect(footerRow.children[2].classList.contains('jss_freezed')).to.equal(true);
+        expect(footerRow.children[3].classList.contains('jss_freezed')).to.equal(false);
+
+        expect(footerRow.children[1].style.left).to.equal('0px');
+        expect(footerRow.children[2].style.left).to.not.equal('');
+    });
+
     it('setHeight on a frozen row does not throw and keeps offsets applied', () => {
         const instance = jspreadsheet(root, {
             worksheets: [
