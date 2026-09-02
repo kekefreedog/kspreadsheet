@@ -132,6 +132,9 @@ Serve your html file and then you will get the rendered table in your browser
 
 ## Jspreadsheet Changelog
 
+### Custom 2.6.0
+-   Resize width and height of multiple rows / columns in same time
+
 ### Custom 2.5.0
 
 -   Implement method `getSearch` to get search value stored
