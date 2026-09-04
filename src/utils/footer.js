@@ -1,4 +1,5 @@
 import { parseValue } from './internal.js';
+import { updateStickyFooter } from './freeze.js';
 
 export const setFooter = function (data) {
     const obj = this;
@@ -47,6 +48,9 @@ export const setFooter = function (data) {
                 td.style.display = obj.cols[i].colElement.style.display;
             }
         }
+
+        // Pin the footer at the bottom of the scrollable viewport (opt-in via stickyFooter)
+        updateStickyFooter.call(obj);
     }
 };
 
@@ -112,6 +116,9 @@ export const setFooters = function (data) {
                 td.style.display = obj.cols[i].colElement.style.display;
             }
         }
+
+        // Pin the footer at the bottom of the scrollable viewport (opt-in via stickyFooter)
+        updateStickyFooter.call(obj);
     }
 };
 

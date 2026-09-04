@@ -18,6 +18,7 @@ import {
 } from './columns.js';
 import { getData, getDataFromRange, getValue, getValueFromCoords, setData, setValue, setValueFromCoords } from './data.js';
 import { cutControls, scrollControls, wheelControls } from './events.js';
+import { updateStickyEdgeClasses } from './freeze.js';
 import {
     getHighlighted,
     getRange,
@@ -84,6 +85,23 @@ const createTable = function () {
     obj.content.onwheel = function (e) {
         wheelControls.call(obj, e);
     };
+
+    // `tableOverflow: true` only sets `overflow-y`/`overflow-x: auto` on `obj.content` for
+    // whichever axis has an explicit `tableHeight`/`tableWidth` (see below) — for the other
+    // axis, the whole page scrolls instead, and `obj.content`'s own 'scroll' event never fires.
+    // The header/row-number column stay pinned fine either way (sticky doesn't care which
+    // ancestor scrolls), but updateStickyEdgeClasses (border toggling) does need SOME event to
+    // react to, so also listen on the window and let it self-remove once this worksheet's
+    // content is no longer in the document (there's no dedicated per-worksheet teardown hook
+    // this can otherwise piggyback on).
+    const windowScrollHandler = function () {
+        if (!document.body.contains(obj.content)) {
+            window.removeEventListener('scroll', windowScrollHandler);
+            return;
+        }
+        updateStickyEdgeClasses.call(obj);
+    };
+    window.addEventListener('scroll', windowScrollHandler);
 
     // Search
     const searchContainer = document.createElement('div');
@@ -331,6 +349,13 @@ const createTable = function () {
         if (obj.options.tableWidth) {
             obj.content.style['overflow-x'] = 'auto';
             obj.content.style.width = typeof obj.options.tableWidth === 'string' ? obj.options.tableWidth : obj.options.tableWidth + 'px';
+        }
+
+        // Rubber-band/elastic overscroll ("bounce" past the edge, plus scroll chaining to the
+        // parent page once at the edge) is native browser behavior on the scrolling container
+        // (obj.content) and is left alone (default 'auto') unless explicitly opted out of.
+        if (obj.options.overflowBounce == false) {
+            obj.content.style.overscrollBehavior = 'contain';
         }
     }
 

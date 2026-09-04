@@ -850,6 +850,93 @@ const scenarios = [
             });
         },
     },
+    {
+        name: 'Open-ended range formulas (B:B, B2:B, A1:C)',
+        check: 'A grid with columns A/B/C filled with numbers 1-5 in rows 1-5. Row 6 holds three formulas: D6 =SUM(B:B) should sum the whole B column (15), E6 =SUM(B2:B) should sum B from row 2 down to the last row (14, i.e. skipping B1), F6 =SUM(A1:C) should sum the whole A:C block (45). Click "Add row (values 6/6/6)" — a new row 6 (values 6/6/6) is inserted BEFORE the formula row (now row 7), and all three sums must update automatically, with no separate recalculate step needed: D=21, E=20, F=63.',
+        render() {
+            const instance = jspreadsheet(root, {
+                tabs: true,
+                toolbar: true,
+                worksheets: [
+                    {
+                        data: [
+                            [1, 1, 1],
+                            [2, 2, 2],
+                            [3, 3, 3],
+                            [4, 4, 4],
+                            [5, 5, 5],
+                            ['', '', '', '=SUM(B:B)', '=SUM(B2:B)', '=SUM(A1:C)'],
+                        ],
+                        minDimensions: [6, 6],
+                    },
+                ],
+            });
+
+            const btn = document.createElement('button');
+            btn.innerText = 'Add row (values 6/6/6)';
+            btn.addEventListener('click', () => {
+                for (const worksheet of instance) {
+                    worksheet.insertRow(1, 5, true);
+                    worksheet.setValue([
+                        { x: 0, y: 5, value: 6 },
+                        { x: 1, y: 5, value: 6 },
+                        { x: 2, y: 5, value: 6 },
+                    ]);
+                }
+            });
+            extra.appendChild(btn);
+
+            return instance;
+        },
+    },
+    {
+        name: 'Table overflow + footer + stickyFooter option (NEW)',
+        check: 'A grid boxed into a small scrollable viewport (tableWidth/tableHeight both smaller than the data, tableOverflow: true, NO frozen columns/rows) with a footer row showing "Total" + SUM formulas for the Qty and Price columns (Qty=1050, Price=2625.00). Starts with stickyFooter: true — the footer must stay pinned/visible at the bottom of the viewport while the body scrolls underneath it, no need to scroll all the way down to see it. Click "Toggle stickyFooter" to switch to stickyFooter: false (or omitted) — the footer must go back to the OLD behavior: it scrolls away with the body and only becomes visible once you scroll all the way to the bottom. Toggle back and forth to compare both.',
+        render() {
+            const data = [];
+            const items = ['Cheese', 'Apples', 'Carrots', 'Oranges', 'Bread', 'Milk', 'Eggs', 'Butter', 'Rice', 'Pasta'];
+            for (let i = 0; i < 20; i++) {
+                data.push([items[i % items.length], (i + 1) * 5, ((i + 1) * 12.5).toFixed(2)]);
+            }
+
+            let stickyFooter = true;
+            let instance;
+
+            const renderGrid = () => {
+                root.innerHTML = '';
+                instance = jspreadsheet(root, {
+                    tabs: true,
+                    toolbar: true,
+                    worksheets: [
+                        {
+                            data,
+                            colHeaders: ['Item', 'Qty', 'Price'],
+                            columns: [{ type: 'text', width: 300 }, { type: 'numeric' }, { type: 'numeric' }],
+                            minDimensions: [3, 20],
+                            tableOverflow: true,
+                            tableWidth: '400px',
+                            tableHeight: '250px',
+                            footers: [['Total', '=SUM(B1:B20)', '=SUM(C1:C20)']],
+                            stickyFooter,
+                        },
+                    ],
+                });
+                return instance;
+            };
+
+            const btn = document.createElement('button');
+            const updateLabel = () => (btn.innerText = 'Toggle stickyFooter (currently ' + stickyFooter + ')');
+            updateLabel();
+            btn.addEventListener('click', () => {
+                stickyFooter = !stickyFooter;
+                updateLabel();
+                renderGrid();
+            });
+            extra.appendChild(btn);
+
+            return renderGrid();
+        },
+    },
 ];
 
 // ---- QA harness UI ----

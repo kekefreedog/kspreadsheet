@@ -132,7 +132,14 @@ Serve your html file and then you will get the rendered table in your browser
 
 ## Jspreadsheet Changelog
 
+### Custom 2.7.0
+
+-   Support open-ended range references in formulas — whole-column (`B:B`), open-start (`B2:B`), and open-end (`A1:C`) — expanding to every row currently in the sheet;
+-   Add `stickyFooter` worksheet option to pin the footer at the bottom of a scrollable (`tableOverflow`) viewport instead of scrolling away with the body;
+-   Add `overflowBounce` worksheet option (default `true`) to control rubber-band/elastic overscroll and scroll chaining on a scrollable (`tableOverflow`) viewport, via `overscroll-behavior`;
+
 ### Custom 2.6.0
+
 -   Resize width and height of multiple rows / columns in same time
 
 ### Custom 2.5.0

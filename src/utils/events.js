@@ -21,7 +21,7 @@ import { openFilter } from './filter.js';
 import { firstNonFrozenChild, loadDown, loadedEdgeMargin, loadPage, loadUp } from './lazyLoading.js';
 import { setWidth } from './columns.js';
 import { moveRow, setHeight } from './rows.js';
-import { updateFrozenColumnOffsets, updateFrozenRowOffsets } from './freeze.js';
+import { updateFrozenColumnOffsets, updateFrozenRowOffsets, updateStickyEdgeClasses } from './freeze.js';
 import version from './version.js';
 import { getCellNameFromCoords } from './helpers.js';
 
@@ -1674,6 +1674,8 @@ export const scrollControls = function (e) {
     if (obj.options.freezeColumns > 0 || obj.options.freezeRows > 0) {
         syncFreezeOverlayOnScroll.call(obj);
     }
+
+    updateStickyEdgeClasses.call(obj);
 
     // Close editor
     if (obj.options.lazyLoading == true || obj.options.tableOverflow == true) {

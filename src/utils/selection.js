@@ -55,6 +55,15 @@ export const updateCornerPosition = function () {
             }
         }
 
+        // Hide the corner if the last selected cell is currently sitting behind the
+        // sticky footer band (option stickyFooter) — same reasoning as the freeze checks above
+        if (!hiddenBehindFreeze && obj.options.stickyFooter == true && obj.tfoot && obj.tfoot.children.length) {
+            const footerTop = obj.tfoot.children[0].getBoundingClientRect().top;
+            if (y2 + h2 > footerTop) {
+                hiddenBehindFreeze = true;
+            }
+        }
+
         if (hiddenBehindFreeze) {
             obj.corner.style.display = 'none';
         } else if (obj.options.selectionCopy != false) {
@@ -200,6 +209,22 @@ const getFrozenClipTop = function (obj) {
     return Math.round(rowRect.bottom - contentRect.top + obj.content.scrollTop);
 };
 
+/**
+ * Compute the top edge of the sticky footer (option `stickyFooter`) in content-div
+ * coordinates, i.e. the boundary below which the footer visually covers the body — mirrors
+ * getFrozenClipLeft/getFrozenClipTop above, but for the bottom-pinned footer band. Unlike
+ * frozen rows/columns (which never move), the footer's visual top edge changes as you scroll
+ * (it is only actually "stuck" once the body has scrolled that far), so this is recomputed
+ * from its live getBoundingClientRect() every time rather than cached.
+ * Returns 0 if stickyFooter is not active.
+ */
+const getStickyFooterClipBottom = function (obj) {
+    if (obj.options.stickyFooter != true || !obj.tfoot || !obj.tfoot.children.length) return 0;
+    const contentRect = obj.content.getBoundingClientRect();
+    const footerRect = obj.tfoot.children[0].getBoundingClientRect();
+    return Math.round(footerRect.top - contentRect.top + obj.content.scrollTop);
+};
+
 export const updateHighlightBorder = function () {
     const obj = this;
 
@@ -225,6 +250,13 @@ export const updateHighlightBorder = function () {
             if (clipTop > 0 && top < clipTop) {
                 height = Math.max(0, height - (clipTop - top));
                 top = clipTop;
+            }
+
+            // Clip selection overlay to not overlap the sticky footer (option stickyFooter)
+            // (same reasoning as the frozen columns/rows clip above)
+            const clipBottom = getStickyFooterClipBottom(obj);
+            if (clipBottom > 0 && top + height > clipBottom) {
+                height = Math.max(0, clipBottom - top);
             }
 
             if (width <= 0 || height <= 0) {
@@ -268,6 +300,12 @@ export const updateHighlightCopy = function () {
             top = clipTop;
         }
 
+        // Clip copy overlay to not overlap the sticky footer (option stickyFooter)
+        const clipBottom = getStickyFooterClipBottom(obj);
+        if (clipBottom > 0 && top + height > clipBottom) {
+            height = Math.max(0, clipBottom - top);
+        }
+
         if (width <= 0 || height <= 0) {
             obj.highlightCopy.style.top = '-2000px';
             obj.highlightCopy.style.left = '-2000px';
@@ -307,6 +345,12 @@ export const updateHighlightFill = function (first, last) {
     if (clipTop > 0 && top < clipTop) {
         height = Math.max(0, height - (clipTop - top));
         top = clipTop;
+    }
+
+    // Clip fill-drag overlay to not overlap the sticky footer (option stickyFooter)
+    const clipBottom = getStickyFooterClipBottom(obj);
+    if (clipBottom > 0 && top + height > clipBottom) {
+        height = Math.max(0, clipBottom - top);
     }
 
     if (width <= 0 || height <= 0) {

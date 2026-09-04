@@ -1,3 +1,42 @@
+/**
+ * Toggle `jss_scrolled_top`/`jss_scrolled_left` on the table — these gate the header's
+ * border-bottom and the row-number column's border-right (see jspreadsheet.css), which only
+ * show once actually scrolled (at rest they'd double up with row 1's border-top / column A's
+ * border-left into a visibly thicker line).
+ *
+ * Deliberately geometry-based (comparing the sticky corner cell's current position against the
+ * table's own, unstuck position) rather than reading `obj.content.scrollTop`/`scrollLeft`
+ * directly: `tableOverflow: true` without an explicit `tableHeight`/`tableWidth` for a given
+ * axis leaves THAT axis scrolling the whole page instead of `.jss_content` (see
+ * worksheets.js — `overflow-y`/`overflow-x` only get set to 'auto' when the matching dimension
+ * is configured), so `obj.content.scrollTop`/`scrollLeft` can stay 0 forever even while the
+ * table has very much scrolled. The sticky corner cell's own position, however, reflects
+ * reality regardless of which ancestor is actually doing the scrolling — at rest it sits ~1px
+ * off the table's own top-left (the deliberate offset compensating for `.jss_worksheet`'s own
+ * 1px transparent border, see the `top: 1px`/`left: 1px` comments below), and that gap grows
+ * sharply once anything has actually scrolled. The epsilon (2px) absorbs that 1px baseline
+ * without misfiring on it alone.
+ */
+export const updateStickyEdgeClasses = function () {
+    const obj = this;
+
+    if (!obj.table) {
+        return;
+    }
+
+    const corner = obj.table.querySelector('.jss_selectall') || (obj.thead && obj.thead.rows[0] && obj.thead.rows[0].children[0]);
+
+    if (!corner) {
+        return;
+    }
+
+    const cornerRect = corner.getBoundingClientRect();
+    const tableRect = obj.table.getBoundingClientRect();
+
+    obj.table.classList.toggle('jss_scrolled_top', cornerRect.top - tableRect.top > 2);
+    obj.table.classList.toggle('jss_scrolled_left', cornerRect.left - tableRect.left > 2);
+};
+
 // Get width of all freezed cells together, including the always-pinned row-number column
 export const getFreezeWidth = function () {
     const obj = this;
@@ -170,5 +209,56 @@ export const updateFrozenRowOffsets = function () {
         }
 
         top += rowElement.offsetHeight;
+    }
+};
+
+/**
+ * Pin the footer at the bottom of the scrollable viewport (`tableOverflow` + `tableHeight`)
+ * using CSS `position: sticky`, mirroring `updateFrozenRowOffsets`. Opt-in via the
+ * `stickyFooter` worksheet option — without it the footer keeps its historical behavior of
+ * scrolling away with the body, only becoming visible once the user scrolls all the way down.
+ *
+ * With multiple footer rows, the LAST row rests at bottom:0 and earlier rows stack above it
+ * (their bottom offset is the height of every footer row below them), same idea as
+ * `updateFrozenRowOffsets` stacking frozen rows downward from the header.
+ */
+export const updateStickyFooter = function () {
+    const obj = this;
+
+    if (!obj.tfoot) {
+        return;
+    }
+
+    if (obj.options.stickyFooter != true) {
+        // Option not (or no longer) enabled: undo any sticky pinning left over from a previous
+        // setFooter()/setFooters() call so the footer goes back to scrolling with the body.
+        for (const footerRow of obj.tfoot.children) {
+            for (let k = 0; k < footerRow.children.length; k++) {
+                footerRow.children[k].classList.remove('jss_footer_sticky');
+                footerRow.children[k].style.removeProperty('bottom');
+            }
+        }
+        obj.content.style.removeProperty('padding-bottom');
+        return;
+    }
+
+    // `sticky; bottom: 0` rests flush against the CONTAINER's bottom padding edge, not its
+    // border edge — `.jss_content` has its own `padding-bottom` (breathing room for the
+    // regular, non-sticky-footer case), which would otherwise leave a reserved strip past the
+    // footer's own box, through which the scrolled body can still peek. The sticky footer now
+    // acts as the grid's visual bottom edge, so it takes over that space instead.
+    obj.content.style.paddingBottom = '0px';
+
+    let bottom = 0;
+
+    for (let j = obj.tfoot.children.length - 1; j >= 0; j--) {
+        const rowElement = obj.tfoot.children[j];
+
+        for (let k = 0; k < rowElement.children.length; k++) {
+            rowElement.children[k].classList.add('jss_footer_sticky');
+            rowElement.children[k].style.bottom = bottom + 'px';
+        }
+
+        bottom += rowElement.offsetHeight;
     }
 };

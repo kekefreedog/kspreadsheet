@@ -44,20 +44,18 @@
     height: 100%;
 }
 
+/* No padding-right/padding-bottom here (there used to be some, meant to leave breathing room
+   for the scrollbar) — that padding becomes part of this element's own scrollWidth/scrollHeight,
+   which is otherwise sized to exactly match its widest/tallest child (`table.jss_worksheet`).
+   The mismatch it created shows up as dead white space past the table's true right/bottom edge
+   once you scroll all the way there — the scrollbar itself already reserves its own space via
+   `overflow: auto`, so this padding was pure double-booking, not something the scrollbar needed. */
 .jss_content {
     display: inline-block;
     box-sizing: border-box;
-    padding-right: 3px;
-    padding-bottom: 3px;
     position: relative;
     scrollbar-width: thin;
     scrollbar-color: #666 transparent;
-}
-
-@supports (-moz-appearance: none) {
-    .jss_content {
-        padding-right: 10px;
-    }
 }
 
 .jss_content::-webkit-scrollbar {
@@ -100,8 +98,34 @@
     overflow: hidden;
     position: -webkit-sticky;
     position: sticky;
-    top: 0;
+    /* Not 0: `.jss_worksheet` has its own `border-top: 1px solid transparent` sitting above
+       the header, which is part of the header's NATURAL (unstuck) flow position but is NOT
+       accounted for once sticky positioning actually constrains the cell against the
+       scrollport — `top: 0` measures against the scrollport itself, ignoring that ancestor
+       border, landing the "stuck" position exactly 1px above the "natural" one. The result is
+       a real, measured 1px jump the instant scrolling starts (confirmed via
+       getBoundingClientRect() across scrollTop 0→1: constant beforehand, but a hard jump right
+       at that transition) — not a rendering artifact, an actual geometry mismatch. Matching
+       the offset to that border's width removes the discontinuity entirely.
+       That 1px offset does open a new 1px gap directly ABOVE the header, between the
+       scrollport's true top edge and the header's now-shifted box — otherwise-invisible
+       (no element renders there) EXCEPT that the body keeps scrolling underneath, so a sliver
+       of whatever row is currently at the very top peeks through it. `box-shadow` paints a
+       solid, same-colored copy of the box 1px higher — pure paint, no layout/geometry effect,
+       so it can't reintroduce the jump the offset above just fixed. */
+    top: 1px;
     z-index: 2;
+    box-shadow: 0 -1px 0 0 #f3f3f3;
+}
+
+/* Seal the header's true bottom edge (its last row — the filter row if present, otherwise the
+   column-title row) against the body scrolling underneath it, mirroring the sticky footer's own
+   border-bottom below. Only shown once actually scrolled away from the top (`jss_scrolled_top`,
+   toggled in scrollControls/events.js) — at rest row 1 already has its own visible border-top,
+   and border-collapse: separate means the two borders don't merge, they'd double up into a
+   visibly thicker line instead of one clean one. */
+.jss_worksheet.jss_scrolled_top > thead > tr:last-child > td {
+    border-bottom: 1px solid #ccc;
 }
 
 .jss_worksheet > thead > tr > td.dragging {
@@ -110,11 +134,26 @@
 
 /* Row-number corner cell(s) (top-left blank cell of the header/nested-header/filter rows):
    keep them pinned horizontally too, so the row numbers stay visible during horizontal
-   scroll regardless of freezeColumns — mirrors the header row's unconditional vertical stick. */
+   scroll regardless of freezeColumns — mirrors the header row's unconditional vertical stick.
+   `left: 1px` for the same reason the header uses `top: 1px` above (`.jss_worksheet`'s
+   `border-left: 1px solid transparent`, mirrored on this axis).
+   `border-right` starts transparent and is only colored in once actually scrolled right
+   (`jss_scrolled_left`, toggled in scrollControls/events.js) — at rest column A already has
+   its own visible border-left, and the two would double up into a visibly thicker line
+   instead of one clean one. */
 .jss_worksheet > thead > tr > td:first-child {
-    left: 0;
+    left: 1px;
     z-index: 4;
-    border-right: 1px solid #ccc;
+    border-right: 1px solid transparent;
+    /* Corner cell (both axes shifted): needs the header's "up" shadow (repeated here since
+       box-shadow isn't additive across rules — this selector's value replaces, not extends,
+       the base rule's) PLUS a "left" one for its own 1px left gap, PLUS one offset diagonally
+       so the exact 1px×1px corner square (above AND left at once) is covered too — the pure
+       up/left shadows alone don't reach it, they only extend along their own row/column. */
+    box-shadow: 0 -1px 0 0 #f3f3f3, -1px 0 0 0 #f3f3f3, -1px -1px 0 0 #f3f3f3;
+}
+.jss_worksheet.jss_scrolled_left > thead > tr > td:first-child {
+    border-right-color: #ccc;
 }
 
 .jss_worksheet > thead > tr > td.selected {
@@ -138,7 +177,8 @@
 .jss_worksheet > tbody > tr > td:first-child {
     position: -webkit-sticky;
     position: sticky;
-    left: 0;
+    /* left: 1px (not 0), same border-compensation reasoning as the header's top: 1px above. */
+    left: 1px;
     /* Only sticky on the left axis by default (like other single-axis frozen cells, z-index
        1) — bumped to 2 below only when its own row is ALSO frozen (a true 2-axis corner).
        Leaving this at 2 unconditionally made every row-number cell tie with the frozen rows'
@@ -147,7 +187,16 @@
     z-index: 1;
     background-color: #f3f3f3;
     text-align: center;
-    border-right: 1px solid #ccc;
+    /* Seals the 1px gap the left: 1px offset above opens up to this cell's own left — same
+       reasoning as the header's box-shadow, mirrored on this axis (every row's row-number
+       cell has this gap, not just row 1, since every row is independently sticky here). */
+    box-shadow: -1px 0 0 0 #f3f3f3;
+}
+
+/* Seal the row-number column's right edge in the body too, same reasoning/toggle as the
+   header's corner cell above. */
+.jss_worksheet.jss_scrolled_left > tbody > tr > td:first-child {
+    border-right-color: #ccc;
 }
 
 .jss_worksheet > tbody.resizable > tr > td:first-child::before {
@@ -315,6 +364,31 @@
     cursor: pointer;
     box-sizing: border-box;
     overflow: hidden;
+}
+
+/* Opt-in via the `stickyFooter` worksheet option (see updateStickyFooter in freeze.js):
+   pins the footer at the bottom of the scrollable viewport instead of scrolling away with
+   the body. `bottom` itself is set inline per-cell (stacked when there are multiple footer
+   rows), same pattern as `.jss_row_freezed`'s inline `top`. */
+.jss_worksheet tfoot .jss_footer_sticky {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 2;
+    background-color: #f3f3f3;
+}
+
+/* Seal the sticky footer's true bottom edge (the last footer row, resting at bottom:0) against
+   whatever is now visually beneath it (scrollbar gutter/body), mirroring the border-top it
+   already has on top. Only the last row needs it — with multiple footer rows, the earlier ones
+   already get a visual seam from the row-order border-top rule above. */
+.jss_worksheet tfoot tr:last-child .jss_footer_sticky {
+    border-bottom: 1px solid #ccc;
+}
+
+/* Corner cell (frozen column + sticky footer, both axes) needs to paint above cells pinned
+   on only one axis, same reasoning as the `.jss_freezed.jss_row_freezed` tbody corner rule. */
+.jss_worksheet tfoot .jss_freezed.jss_footer_sticky {
+    z-index: 4 !important;
 }
 
 .jss_worksheet .highlight {
@@ -745,9 +819,21 @@
 .jss_worksheet > tfoot > tr > td:first-child {
     position: -webkit-sticky;
     position: sticky;
-    left: 0;
+    /* left: 1px (not 0), same border-compensation reasoning as the header's top: 1px above. */
+    left: 1px;
     z-index: 4;
     background-color: #f3f3f3;
+    /* Seals the 1px gap left: 1px opens to this cell's own left, same reasoning as the
+       header/body row-number cells above. */
+    box-shadow: -1px 0 0 0 #f3f3f3;
+}
+
+/* Seal the row-number column's right edge in the footer too, same reasoning/toggle as the
+   header/body corner cells above (border-color transition + will-change explained there;
+   this one was missed the first time around — the footer's row-number cell never had a
+   border-right at all, conditional or not). */
+.jss_worksheet.jss_scrolled_left > tfoot > tr > td:first-child {
+    border-right-color: #ccc;
 }
 
 .jss_worksheet tbody .jss_freezed,

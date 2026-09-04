@@ -133,13 +133,19 @@ export const executeFormula = function (expression, x, y) {
 
         formulaLoopProtection[parentId] = true;
 
-        // Convert range tokens
+        // Convert range tokens (ex: A1:B2, but also open-ended ranges like B:B, B2:B, A1:C,
+        // which reach the last existing row on whichever side omits the row number)
         const tokensUpdate = function (tokens) {
+            // Last existing row number (1-based), used to close open-ended ranges
+            const lastRow = obj.records.length || 1;
+
             for (let index = 0; index < tokens.length; index++) {
                 const f = [];
                 const token = tokens[index].split(':');
-                const e1 = getIdFromColumnName(token[0], true);
-                const e2 = getIdFromColumnName(token[1], true);
+                const start = /[0-9]+$/.test(token[0]) ? token[0] : token[0] + '1';
+                const end = /[0-9]+$/.test(token[1]) ? token[1] : token[1] + lastRow;
+                const e1 = getIdFromColumnName(start, true);
+                const e2 = getIdFromColumnName(end, true);
 
                 let x1, x2;
 
@@ -174,7 +180,7 @@ export const executeFormula = function (expression, x, y) {
         // Range with $ remove $
         expression = expression.replace(/\$?([A-Z]+)\$?([0-9]+)/g, '$1$2');
 
-        let tokens = expression.match(/([A-Z]+[0-9]+):([A-Z]+[0-9]+)/g);
+        let tokens = expression.match(/(?<![A-Z0-9])[A-Z]+[0-9]*:[A-Z]+[0-9]*(?![A-Z0-9])/g);
         if (tokens && tokens.length) {
             tokensUpdate(tokens);
         }
@@ -882,6 +888,52 @@ export const updateFormula = function (formula, referencesToUpdate) {
 };
 
 /**
+ * Force every formula cell in the sheet to re-evaluate and re-render its displayed value.
+ *
+ * `updateFormulas` above only renames/rewrites references for cells that MOVED as part of a
+ * row/column insert/delete/move — it has no way to know about brand new cells a formula's range
+ * now covers: a fixed range whose bound just got textually widened to include the new row/column
+ * (e.g. `=SUM(A1:A5)` rewritten to `=SUM(A1:A6)`), or an open-ended range like `B:B`/`A1:C` that
+ * always covers "whatever is there now" and never needed textual rewriting in the first place.
+ * Either way, the OLD dependency registration in `obj.formula` predates the insert and never
+ * pointed the new cell back at this formula, so the normal setValue → updateFormulaChain path
+ * never fires for it. Brute-force re-executing every formula cell after a structural change is
+ * the simplest correct fix — it doesn't rely on the dependency chain having anticipated cells
+ * that didn't exist yet when it was built.
+ */
+const recalculateFormulas = function () {
+    const obj = this;
+
+    for (let j = 0; j < obj.options.data.length; j++) {
+        for (let i = 0; i < obj.options.data[j].length; i++) {
+            const value = obj.options.data[j][i];
+
+            if (('' + value).substr(0, 1) != '=' || !obj.records[j] || !obj.records[j][i]) {
+                continue;
+            }
+
+            const colType = (obj.options.columns && obj.options.columns[i] && obj.options.columns[i].type) || obj.options.defaultCellType || null;
+
+            // Only the plain text/numeric/html rendering path re-renders from parseValue like
+            // this — the other column types (checkbox, dropdown, calendar, color, image, or a
+            // custom object type) have their own dedicated rendering and don't normally hold
+            // formulas to begin with.
+            if ((colType && typeof colType === 'object') || ['hidden', 'checkbox', 'radio', 'calendar', 'dropdown', 'color', 'image'].indexOf(colType) > -1) {
+                continue;
+            }
+
+            const td = obj.records[j][i].element;
+
+            if (colType == 'html' || obj.parent.config.parseHTML === true) {
+                td.innerHTML = stripScript(parseValue.call(obj, i, j, value, td));
+            } else {
+                td.textContent = parseValue.call(obj, i, j, value, td);
+            }
+        }
+    }
+};
+
+/**
  * Update formulas
  */
 const updateFormulas = function (referencesToUpdate) {
@@ -1041,6 +1093,10 @@ export const updateTableReferences = function () {
 
     // Update formulas
     updateFormulas.call(obj, affectedTokens);
+
+    // Re-evaluate every formula cell so ones whose range now covers a brand new row/column
+    // (inserted, not just shifted) pick up the change too — see recalculateFormulas() above.
+    recalculateFormulas.call(obj);
 
     // Update meta data
     updateMeta.call(obj, affectedTokens);
