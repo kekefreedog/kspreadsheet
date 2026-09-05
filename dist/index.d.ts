@@ -1205,6 +1205,13 @@ declare namespace jspreadsheet {
         selectionCopy?: boolean;
 
         /**
+         * Pin the footer at the bottom of the scrollable viewport instead of scrolling away with the body.
+         * This property is only used when {@link WorksheetOptions.tableOverflow} is allowed.
+         * @default false
+         */
+        stickyFooter?: boolean;
+
+        /**
          * Cell styles.
          */
         style?: Record<string, string>;
