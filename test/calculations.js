@@ -3,6 +3,37 @@ const { expect } = require('chai');
 const jspreadsheet = require('../dist/index.js');
 
 describe('Calculations', () => {
+    it('recalculates repeated references to formula cells', () => {
+        const [worksheet] = jspreadsheet(root, {
+            worksheets: [{ data: [[2, '=A1+1', '=B1+B1+A1+A1']] }],
+        });
+
+        expect(worksheet.getValue('C1', true)).to.equal('10');
+
+        worksheet.setValue('A1', 3);
+
+        expect(worksheet.getValue('C1', true)).to.equal('14');
+    });
+
+    it('resolves cell references when a global has the same name', () => {
+        const descriptor = Object.getOwnPropertyDescriptor(global, 'A1');
+        global.A1 = 100;
+
+        try {
+            const [worksheet] = jspreadsheet(root, {
+                worksheets: [{ data: [[2, '=A1+A1']] }],
+            });
+
+            expect(worksheet.getValue('B1', true)).to.equal('4');
+        } finally {
+            if (descriptor) {
+                Object.defineProperty(global, 'A1', descriptor);
+            } else {
+                delete global.A1;
+            }
+        }
+    });
+
     it('Testing formula chain', () => {
         let test = jspreadsheet(root, {
             worksheets: [

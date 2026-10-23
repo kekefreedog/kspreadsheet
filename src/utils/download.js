@@ -1,5 +1,4 @@
 import { copy } from './copyPaste.js';
-import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 
 const IMAGE_DATA_URI_PATTERN = /^data:image\/([a-z0-9.+-]+);base64,(.*)$/i;

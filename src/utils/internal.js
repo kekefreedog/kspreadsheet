@@ -208,7 +208,7 @@ export const executeFormula = function (expression, x, y) {
                     }
 
                     // Do not calculate again
-                    if (eval('typeof(' + tokens[i] + ') == "undefined"')) {
+                    if (!Object.prototype.hasOwnProperty.call(formulaExpressions, tokens[i])) {
                         // Coords
                         const position = getIdFromColumnName(tokens[i], 1);
                         // Get value

@@ -3,14 +3,17 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 class MyPlugin {
     apply(compiler) {
-        compiler.hooks.emit.tap('MyPlugin', (compilation) => {
-            // Get the bundled file name
-            const fileName = Object.keys(compilation.assets)[0];
+        compiler.hooks.thisCompilation.tap('MyPlugin', (compilation) => {
+            compilation.hooks.processAssets.tap(
+                {
+                    name: 'MyPlugin',
+                    stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE,
+                },
+                () => {
+                    const fileName = 'index.js';
+                    const fileContent = compilation.getAsset(fileName).source;
 
-            // Get the bundled file content
-            const fileContent = compilation.assets[fileName].source();
-
-            const header = `if (! jSuites && typeof(require) === 'function') {
+                    const header = `if (! jSuites && typeof(require) === 'function') {
     var jSuites = require('jsuites');
 }
 
@@ -24,17 +27,12 @@ if (! formula && typeof(require) === 'function') {
     global.jspreadsheet = factory();
 }(this, (function () {`;
 
-            const footer = `    return jspreadsheet;
+                    const footer = `    return jspreadsheet;
 })));`;
 
-            // Updated file content with custom content added
-            const updatedFileContent = header + '\n\n' + fileContent + '\n\n' + footer;
-
-            // Replace the bundled file content with updated content
-            compilation.assets[fileName] = {
-                source: () => updatedFileContent,
-                size: () => updatedFileContent.length,
-            };
+                    compilation.updateAsset(fileName, new compiler.webpack.sources.ConcatSource(header, '\n\n', fileContent, '\n\n', footer));
+                }
+            );
         });
     }
 }
