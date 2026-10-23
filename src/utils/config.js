@@ -41,6 +41,10 @@ export const setConfig = function (config, spreadsheetLevel) {
             }
         } else {
             obj.options[key] = config[key];
+            if (key === 'multipleSelection' && config[key] !== true) {
+                obj._lastSelectionGesture = null;
+                if (obj.selectedCell) obj.updateSelectionFromCoords(...obj.selectedCell);
+            }
         }
     });
 };

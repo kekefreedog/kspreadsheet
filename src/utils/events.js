@@ -6,10 +6,14 @@ import { down, first, last, left, right, up } from './keys.js';
 import { isColMerged, isRowMerged } from './merges.js';
 import {
     copyData,
+    getHighlighted,
     hideHighlightFill,
+    isSelected,
     removeCopySelection,
+    removeCopyingSelection,
     resetSelection,
     selectAll,
+    setSelections,
     updateCornerPosition,
     updateHighlightBorder,
     updateHighlightCopy,
@@ -24,6 +28,7 @@ import { moveRow, setHeight } from './rows.js';
 import { updateFrozenColumnOffsets, updateFrozenRowOffsets, updateStickyEdgeClasses } from './freeze.js';
 import version from './version.js';
 import { getCellNameFromCoords } from './helpers.js';
+import { isCellInRanges, normalizeSelectionRange, subtractRange } from './selectionState.js';
 
 const getElement = function (element) {
     let jssSection = 0;
@@ -194,7 +199,112 @@ const mouseUpControls = function (e) {
     }
 
     // Mouse up
+    if (libraryBase.jspreadsheet.current) {
+        libraryBase.jspreadsheet.current._multiSelectionDrag = null;
+    }
     libraryBase.jspreadsheet.isMouseAction = false;
+};
+
+/**
+ * Reapply one add/remove operation to its original selection. Keeping the snapshot
+ * after mouse-up lets Ctrl/Cmd+Shift resize the same operation, including a removal.
+ */
+const updateMultiSelectionGesture = function (obj, gesture, x, y, origin) {
+    const startX = (gesture.role === 'header' || gesture.role === 'nested') && x < gesture.x1 ? gesture.anchorX2 : gesture.x1;
+    let result;
+    if (gesture.additive) {
+        const normalized = normalizeSelectionRange(obj, [startX, gesture.y1, x, y]);
+        if (!normalized) return false;
+        const ranges = gesture.subtractive
+            ? gesture.baseRanges.flatMap((range) => subtractRange(range, normalized.range))
+            : [...gesture.baseRanges, normalized.directional];
+        const activeIndex = gesture.subtractive
+            ? ranges.findIndex((range) => gesture.baseActive && isCellInRanges([range], gesture.baseActive[0], gesture.baseActive[1]))
+            : ranges.length - 1;
+        result = setSelections.call(obj, ranges, activeIndex, origin);
+    } else {
+        result = updateSelectionFromCoords.call(obj, startX, gesture.y1, x, y, origin, 'extend');
+    }
+    if (result !== false) {
+        gesture.x2 = x;
+        gesture.y2 = y;
+        if (gesture.additive) obj._lastSelectionGesture = { ...gesture };
+    }
+    return result;
+};
+
+/**
+ * Add or extend a gesture without discarding the worksheet's other selected ranges.
+ * Keep resize/drag hit areas under the existing header handlers.
+ */
+const multiSelectionMouseDown = function (obj, e) {
+    if (!obj.options.multipleSelection || (!isCtrl(e) && !e.shiftKey)) return false;
+
+    const cell = e.target.closest('td');
+    if (!cell || !obj.table.contains(cell)) return false;
+    if (obj.edition && obj.edition[0].contains(e.target)) return false;
+    const role = getRole(cell);
+    if (!['cell', 'row', 'header', 'nested'].includes(role)) return false;
+
+    const rect = cell.getBoundingClientRect();
+    if (
+        role === 'header' &&
+        ((obj.options.columnResize !== false && rect.right - e.clientX < 6) || (obj.options.columnDrag !== false && rect.bottom - e.clientY < 6))
+    )
+        return false;
+    if (role === 'row' && ((obj.options.rowResize !== false && rect.bottom - e.clientY < 6) || (obj.options.rowDrag !== false && rect.right - e.clientX < 6)))
+        return false;
+
+    if (obj.edition) closeEditor.call(obj, obj.edition[0], true);
+
+    let x1 = Number(cell.getAttribute('data-x'));
+    let y1 = Number(cell.getAttribute('data-y'));
+    let x2 = x1;
+    let y2 = y1;
+    if (role === 'header' || role === 'nested') {
+        if (role === 'nested') {
+            const columns = (cell.getAttribute('data-column') || '').split(',').map(Number);
+            x1 = columns[0];
+            x2 = columns[columns.length - 1];
+        }
+        y1 = 0;
+        y2 = obj.rows.length - 1;
+    } else if (role === 'row') {
+        x1 = 0;
+        x2 = obj.headers.length - 1;
+    }
+
+    const previous = isCtrl(e) && e.shiftKey && obj._lastSelectionGesture;
+    const sameAxis = previous && (previous.role === role || (['header', 'nested'].includes(previous.role) && ['header', 'nested'].includes(role)));
+    let gesture;
+    if (sameAxis) {
+        gesture = { ...previous };
+        if ((role === 'header' || role === 'nested') && x1 < gesture.x1) x2 = x1;
+    } else {
+        const additive = isCtrl(e) && !e.shiftKey;
+        const baseRanges = getHighlighted.call(obj);
+        const baseActive = obj.selectedCell && obj.selectedCell.slice();
+        const anchor = normalizeSelectionRange(obj, [x1, y1, x2, y2]);
+        // Starting on a fully selected cell/header removes a rectangle. The operation
+        // stays fixed when dragging across selected/unselected cells in either direction.
+        const subtractive =
+            additive && anchor && !baseRanges.reduce((parts, range) => parts.flatMap((part) => subtractRange(part, range)), [anchor.range]).length;
+        if (e.shiftKey && obj.selectedCell) {
+            if (role !== 'row') x1 = Number(obj.selectedCell[0]);
+            if (role !== 'header' && role !== 'nested') y1 = Number(obj.selectedCell[1]);
+        }
+        const anchorX2 = role === 'nested' && !e.shiftKey ? x2 : x1;
+        gesture = { baseRanges, baseActive, additive, subtractive, role, x1, y1, x2, y2, anchorX2 };
+    }
+    const result = updateMultiSelectionGesture(obj, gesture, x2, y2, e);
+    if (result !== false) {
+        obj.selectedHeader = role === 'header' || role === 'nested' ? gesture.x1 : null;
+        obj.selectedRow = role === 'row' ? gesture.y1 : null;
+        obj._multiSelectionDrag = gesture;
+        libraryBase.jspreadsheet.isMouseAction = true;
+    }
+    e.preventDefault();
+    return true;
 };
 
 const mouseDownControls = function (e) {
@@ -237,12 +347,30 @@ const mouseDownControls = function (e) {
     }
 
     if (libraryBase.jspreadsheet.current && mouseButton == 1) {
+        // Page navigation must not start a cell drag when the new rows appear.
+        if (e.target.classList.contains('jss_page')) {
+            const obj = libraryBase.jspreadsheet.current;
+            libraryBase.jspreadsheet.isMouseAction = false;
+            obj._multiSelectionDrag = null;
+            e.preventDefault();
+            if (e.target.textContent == '<') {
+                obj.page(0);
+            } else if (e.target.textContent == '>') {
+                obj.page(e.target.getAttribute('title') - 1);
+            } else {
+                obj.page(e.target.textContent - 1);
+            }
+            return;
+        }
+
+        if (multiSelectionMouseDown(libraryBase.jspreadsheet.current, e)) return;
+        libraryBase.jspreadsheet.current._multiSelectionDrag = null;
         if (e.target.classList.contains('jss_selectall')) {
             if (libraryBase.jspreadsheet.current) {
                 selectAll.call(libraryBase.jspreadsheet.current);
             }
         } else if (e.target.classList.contains('jss_corner')) {
-            if (libraryBase.jspreadsheet.current.options.editable != false) {
+            if (libraryBase.jspreadsheet.current.options.editable != false && getHighlighted.call(libraryBase.jspreadsheet.current).length <= 1) {
                 libraryBase.jspreadsheet.current.selectedCorner = true;
             }
         } else {
@@ -290,7 +418,10 @@ const mouseDownControls = function (e) {
                     } else {
                         let o, d;
 
-                        if (libraryBase.jspreadsheet.current.selectedHeader && (e.shiftKey || e.ctrlKey)) {
+                        if (
+                            libraryBase.jspreadsheet.current.selectedHeader != null &&
+                            (e.shiftKey || (!libraryBase.jspreadsheet.current.options.multipleSelection && e.ctrlKey))
+                        ) {
                             o = libraryBase.jspreadsheet.current.selectedHeader;
                             d = columnId;
                         } else {
@@ -443,17 +574,6 @@ const mouseDownControls = function (e) {
                 }
             } else {
                 libraryBase.jspreadsheet.current.selectedRow = false;
-            }
-
-            // Pagination
-            if (e.target.classList.contains('jss_page')) {
-                if (e.target.textContent == '<') {
-                    libraryBase.jspreadsheet.current.page(0);
-                } else if (e.target.textContent == '>') {
-                    libraryBase.jspreadsheet.current.page(e.target.getAttribute('title') - 1);
-                } else {
-                    libraryBase.jspreadsheet.current.page(e.target.textContent - 1);
-                }
             }
         }
 
@@ -724,6 +844,28 @@ const mouseOverControls = function (e) {
                 if (libraryBase.jspreadsheet.current) {
                     return false;
                 }
+            }
+
+            const obj = libraryBase.jspreadsheet.current;
+            const gesture = obj._multiSelectionDrag;
+            if (gesture) {
+                const cell = e.target.closest('td');
+                if (!cell) return;
+                let x = Number(cell.getAttribute('data-x'));
+                let y = Number(cell.getAttribute('data-y'));
+                if (gesture.role === 'row') {
+                    x = obj.headers.length - 1;
+                } else if (gesture.role === 'header' || gesture.role === 'nested') {
+                    const columns = cell.getAttribute('data-column');
+                    if (columns) {
+                        const indices = columns.split(',').map(Number);
+                        x = indices[0] < gesture.x1 ? indices[0] : indices[indices.length - 1];
+                    }
+                    y = obj.rows.length - 1;
+                }
+                if (x === gesture.x2 && y === gesture.y2) return;
+                updateMultiSelectionGesture(obj, gesture, x, y, e);
+                return;
             }
 
             let columnId = e.target.getAttribute('data-x');
@@ -1154,53 +1296,29 @@ const contextMenuControls = function (e) {
                     y = null;
 
                 if (role === 'cell') {
-                    let cellElement = e.target;
-                    while (cellElement.tagName !== 'TD') {
-                        cellElement = cellElement.parentNode;
-                    }
-
-                    y = cellElement.getAttribute('data-y');
-                    x = cellElement.getAttribute('data-x');
-
-                    if (
-                        !libraryBase.jspreadsheet.current.selectedCell ||
-                        x < parseInt(libraryBase.jspreadsheet.current.selectedCell[0]) ||
-                        x > parseInt(libraryBase.jspreadsheet.current.selectedCell[2]) ||
-                        y < parseInt(libraryBase.jspreadsheet.current.selectedCell[1]) ||
-                        y > parseInt(libraryBase.jspreadsheet.current.selectedCell[3])
-                    ) {
+                    const cell = e.target.closest('td');
+                    x = Number(cell.getAttribute('data-x'));
+                    y = Number(cell.getAttribute('data-y'));
+                    if (!isSelected.call(libraryBase.jspreadsheet.current, x, y)) {
                         updateSelectionFromCoords.call(libraryBase.jspreadsheet.current, x, y, x, y, e);
                     }
                 } else if (role === 'row' || role === 'header') {
+                    const worksheet = libraryBase.jspreadsheet.current;
+                    const headerCell = e.target.closest('td');
                     if (role === 'row') {
-                        y = e.target.getAttribute('data-y');
+                        y = Number(headerCell.getAttribute('data-y'));
+                        if (!worksheet.getSelectedRows().includes(y)) updateSelectionFromCoords.call(worksheet, null, y, null, y, e);
                     } else {
-                        x = e.target.getAttribute('data-x');
-                    }
-
-                    if (
-                        !libraryBase.jspreadsheet.current.selectedCell ||
-                        x < parseInt(libraryBase.jspreadsheet.current.selectedCell[0]) ||
-                        x > parseInt(libraryBase.jspreadsheet.current.selectedCell[2]) ||
-                        y < parseInt(libraryBase.jspreadsheet.current.selectedCell[1]) ||
-                        y > parseInt(libraryBase.jspreadsheet.current.selectedCell[3])
-                    ) {
-                        updateSelectionFromCoords.call(libraryBase.jspreadsheet.current, x, y, x, y, e);
+                        x = Number(headerCell.getAttribute('data-x'));
+                        if (!worksheet.getSelectedColumns().includes(x)) updateSelectionFromCoords.call(worksheet, x, null, x, null, e);
                     }
                 } else if (role === 'nested') {
-                    const columns = e.target.getAttribute('data-column').split(',');
-
+                    const columns = e.target.closest('td').getAttribute('data-column').split(',').map(Number);
+                    const worksheet = libraryBase.jspreadsheet.current;
                     x = getElementIndex(e.target) - 1;
                     y = getElementIndex(e.target.parentElement);
-
-                    if (
-                        !libraryBase.jspreadsheet.current.selectedCell ||
-                        columns[0] != parseInt(libraryBase.jspreadsheet.current.selectedCell[0]) ||
-                        columns[columns.length - 1] != parseInt(libraryBase.jspreadsheet.current.selectedCell[2]) ||
-                        libraryBase.jspreadsheet.current.selectedCell[1] != null ||
-                        libraryBase.jspreadsheet.current.selectedCell[3] != null
-                    ) {
-                        updateSelectionFromCoords.call(libraryBase.jspreadsheet.current, columns[0], null, columns[columns.length - 1], null, e);
+                    if (!columns.every((column) => worksheet.getSelectedColumns().includes(column))) {
+                        updateSelectionFromCoords.call(worksheet, columns[0], null, columns[columns.length - 1], null, e);
                     }
                 } else if (role === 'select-all') {
                     selectAll.call(libraryBase.jspreadsheet.current);
@@ -1309,10 +1427,11 @@ const touchEndControls = function (e) {
 export const cutControls = function (e) {
     if (libraryBase.jspreadsheet.current) {
         if (!libraryBase.jspreadsheet.current.edition) {
-            copy.call(libraryBase.jspreadsheet.current, true, undefined, undefined, undefined, undefined, true);
+            const copied = copy.call(libraryBase.jspreadsheet.current, true, undefined, undefined, undefined, undefined, true);
+            if (copied === false) return false;
             if (libraryBase.jspreadsheet.current.options.editable != false) {
                 libraryBase.jspreadsheet.current.setValue(
-                    libraryBase.jspreadsheet.current.highlighted.map(function (record) {
+                    libraryBase.jspreadsheet.current.getSelected().map(function (record) {
                         return record.element;
                     }),
                     ''
@@ -1410,7 +1529,13 @@ const keyDownControls = function (e) {
 
         if (!libraryBase.jspreadsheet.current.edition && libraryBase.jspreadsheet.current.selectedCell) {
             // Which key
-            if (e.which == 37) {
+            if (e.which == 27) {
+                const obj = libraryBase.jspreadsheet.current;
+                const [x, y] = obj.selectedCell;
+                updateSelectionFromCoords.call(obj, x, y, x, y, e);
+                removeCopyingSelection.call(obj);
+                e.preventDefault();
+            } else if (e.which == 37) {
                 left.call(libraryBase.jspreadsheet.current, e.shiftKey, isCtrl(e));
                 e.preventDefault();
             } else if (e.which == 39) {
@@ -1431,13 +1556,13 @@ const keyDownControls = function (e) {
             } else if (e.which == 46 || e.which == 8) {
                 // Delete
                 if (libraryBase.jspreadsheet.current.options.editable != false) {
-                    if (libraryBase.jspreadsheet.current.selectedRow != null) {
+                    if (libraryBase.jspreadsheet.current.selectedRow != null && libraryBase.jspreadsheet.current.selectedRow !== false) {
                         if (libraryBase.jspreadsheet.current.options.allowDeleteRow != false) {
                             if (confirm(jSuites.translate('Are you sure to delete the selected rows?'))) {
                                 libraryBase.jspreadsheet.current.deleteRow();
                             }
                         }
-                    } else if (libraryBase.jspreadsheet.current.selectedHeader) {
+                    } else if (libraryBase.jspreadsheet.current.selectedHeader != null && libraryBase.jspreadsheet.current.selectedHeader !== false) {
                         if (libraryBase.jspreadsheet.current.options.allowDeleteColumn != false) {
                             if (confirm(jSuites.translate('Are you sure to delete the selected columns?'))) {
                                 libraryBase.jspreadsheet.current.deleteColumn();
@@ -1446,7 +1571,7 @@ const keyDownControls = function (e) {
                     } else {
                         // Change value
                         libraryBase.jspreadsheet.current.setValue(
-                            libraryBase.jspreadsheet.current.highlighted.map(function (record) {
+                            libraryBase.jspreadsheet.current.getSelected().map(function (record) {
                                 return record.element;
                             }),
                             ''
@@ -1488,7 +1613,11 @@ const keyDownControls = function (e) {
                 }
                 e.preventDefault();
             } else {
-                if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.which == 90) {
+                    // Ctrl/Cmd + Shift + Z
+                    libraryBase.jspreadsheet.current.redo();
+                    e.preventDefault();
+                } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
                     if (e.which == 65) {
                         // Ctrl + A
                         selectAll.call(libraryBase.jspreadsheet.current);

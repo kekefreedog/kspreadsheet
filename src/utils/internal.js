@@ -471,7 +471,12 @@ export const createCell = function (i, j, value) {
             element.type = colType;
             element.name = 'c' + i;
             element.checked = value == 1 || value == true || value == 'true' ? true : false;
-            element.onclick = function () {
+            element.onclick = function (event) {
+                const modifier = navigator.platform.toUpperCase().includes('MAC') ? event.metaKey : event.ctrlKey;
+                if (obj.options.multipleSelection && (modifier || event.shiftKey)) {
+                    event.preventDefault();
+                    return false;
+                }
                 obj.setValue(td, this.checked);
             };
 
@@ -635,6 +640,17 @@ export const updateCell = function (x, y, value, force) {
         // Resolve effective cell type (column-specific or defaultCellType fallback)
         const updateColType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType || null;
 
+        // Radio groups must not clear a checked readonly sibling, including when a
+        // before-change hook changes the requested value to true.
+        if (
+            updateColType === 'radio' &&
+            !force &&
+            (value == 1 || value == true || value == 'true' || value == 'TRUE') &&
+            obj.options.data.some((row, index) => index !== Number(y) && row[x] && obj.records[index][x].element.classList.contains('readonly'))
+        ) {
+            return { x, y, col: x, row: y };
+        }
+
         let editor = updateColType && typeof updateColType === 'object' ? updateColType : null;
         if (editor) {
             // Update data and cell
@@ -646,7 +662,7 @@ export const updateCell = function (x, y, value, force) {
             // Native functions
             if (updateColType == 'checkbox' || updateColType == 'radio') {
                 // Unchecked all options
-                if (updateColType == 'radio') {
+                if (updateColType == 'radio' && (value == 1 || value == true || value == 'true' || value == 'TRUE')) {
                     for (let j = 0; j < obj.options.data.length; j++) {
                         obj.options.data[j][x] = false;
                     }

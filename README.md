@@ -110,15 +110,62 @@ Serve your html file and then you will get the rendered table in your browser
 
 <br>
 
+## Multiple selections
+
+Enable disconnected cell and range selections per worksheet:
+
+```javascript
+const [worksheet] = jspreadsheet(element, {
+    worksheets: [
+        {
+            data: [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+            ],
+            multipleSelection: true,
+            copyPreserveGaps: true,
+        },
+    ],
+});
+
+worksheet.setSelections([
+    [0, 0, 0, 0],
+    [2, 2, 2, 2],
+]); // A1 and C3
+```
+
+Hold Ctrl (Windows/Linux) or Cmd (macOS) to add or remove a cell or range. A modified drag starting on an unselected cell adds a rectangle; starting on a selected cell subtracts it. Dragging back restores cells outside the current rectangle. After release, Ctrl/Cmd+Shift-click or drag extends or shrinks that last add/remove operation from its original anchor. Shift alone extends the active selected range; plain click or arrow navigation starts a single selection, and Escape keeps only the active cell. Row, column, and nested-header selections support the same modifiers.
+
+`multipleSelection` defaults to `false` for compatibility. `copyPreserveGaps` defaults to `true`: copying A1 and C3 produces a 3×3 clipboard grid with blank gaps. Set it to `false` to pack selected cells left within each selected row and omit unselected rows. Copying within this library retains a mask so pasted gaps leave destination values untouched; other applications receive ordinary blank fields.
+
+Formatting, Delete, checkbox toggles, and compatible pastes act on the selected cells. A scalar can fill disconnected ranges; a block must fit each destination range exactly or by whole repetitions. Disconnected ranges cannot be merged or autofilled. See [selection behavior](docs/jspreadsheet/docs/selection.md) and [clipboard behavior](docs/jspreadsheet/docs/clipboard.md).
+
+Undo with Ctrl/Cmd+Z. Redo with Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y.
+
 ## Development
 
 ### Build your package
 
 % npm run build
 
+### Run validation
+
+```sh
+npm run dist
+npx mocha --recursive --require=mocha.config.js
+npm run lint
+npx playwright install chromium
+npm run test:browser
+```
+
+Browser tests use the built `dist` assets. To use an installed Chrome instead, run `PLAYWRIGHT_CHANNEL=chrome npm run test:browser`.
+
 ### Start a web service
 
 % npm run start
+
+Open [the complete manual test runner](http://localhost:8000/) for all existing checks plus the selection checks, including adding/removing ranges, clipboard gaps, frozen/nested cells, undo, paging, lazy loading, and the centered-table offset. Use the dropdown to jump to any test, Yes/No to record results, Restart this test to restore its data, and download the report at the end. Previous results from both runs are imported automatically. Older links with `?suite=multi-selection` also show the complete list.
 
 ## Data Grid Examples
 

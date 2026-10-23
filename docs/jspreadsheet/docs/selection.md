@@ -6,14 +6,43 @@ description: This section covers the properties, events, and methods for managin
 
 This section covers the technical aspects of handling spreadsheet selections in Jspreadsheet, detailing the key properties, events, and methods for managing selection behaviour.
 
-{.pro}
-> #### What You Can Find in the Pro Version
-> The Pro version of Jspreadsheet enhances selection capabilities, offering features commonly found in advanced spreadsheet software:
-> - **Non-consecutive selection**: Users can hold `Ctrl` to select multiple ranges at once;
-> - **Custom borders**: Supports different border colours, which are helpful in real-time collaboration for identifying different users or creating custom features;\
->
->\
-> [Learn more](https://jspreadsheet.com/docs/selection){.button}
+## Disconnected selections in kspreadsheet
+
+Set worksheet option `multipleSelection: true` to select separate cells and rectangles. It defaults to `false`. The worksheet keeps normalized, non-overlapping ranges and an active directional range. Cells between ranges are never implicitly selected.
+
+| Input | Behavior |
+| --- | --- |
+| Click | Replace the selection with one cell |
+| Ctrl/Cmd-click | Add an unselected cell/group or remove a fully selected cell/group |
+| Ctrl/Cmd-drag | Add a rectangle when starting outside the selection; subtract it when starting on a selected cell/group |
+| Ctrl/Cmd+Shift-click / drag | Extend or shrink the last add/remove operation from its original anchor |
+| Shift-click / Shift-arrow | Extend the active range while retaining other ranges |
+| Arrow / Tab / Enter | Move from the active range and return to single selection |
+| Escape | Keep the active cell and clear copy outlines |
+| Right-click inside a selected range | Preserve the complete selection |
+| Row / column / nested-header click | Apply the same range gestures to the indicated rows or columns |
+
+Ctrl is used on Windows/Linux; Cmd is used on macOS. Existing resize and drag handles retain their behavior. Touch continues to use ordinary single-range selection.
+
+The add/remove operation is chosen when the drag starts and stays fixed until release. Dragging back restores cells outside the current rectangle. After release, Ctrl/Cmd+Shift-click or drag continues that same operation against the selection as it was before the operation began. After a removal, extending removes more cells; shrinking restores cells. This also works when the last operation removed the entire selection. Subtraction removes whole merged cells and never changes cell values. A partially selected row, column, or nested-header group is added; a fully selected group is removed.
+
+Shift alone extends the active selected range. Ctrl/Cmd+Shift uses that same behavior when there is no previous add/remove operation to continue. A plain click, keyboard navigation, a programmatic selection replacement, or a data replacement clears the remembered operation.
+
+### Programmatic ranges
+
+`setSelections(ranges, activeRangeIndex?)` replaces the complete selection. Ranges use inclusive zero-based `[x1, y1, x2, y2]` coordinates; the last supplied range is active by default. An empty list clears selection. More than one input range requires `multipleSelection: true`.
+
+`addSelectionFromCoords(x1, y1, x2?, y2?, toggle = false)` adds a rectangle. Pass `true` as the fifth argument to remove it when fully selected. Merged cells expand the rectangle to their complete extent.
+
+`getHighlighted()` returns a copy of all normalized rectangles. `getSelected()`, `getSelectedRows()`, `getSelectedColumns()`, and `isSelected()` cover their union. `getSelected()` excludes explicitly hidden cells but retains selected cells on detached lazy-loading or pagination rows. `getSelection()`, `getRange()`, and `selectedCell` describe the active range for compatibility; `updateSelectionFromCoords()` replaces all ranges.
+
+`onbeforeselection` and `onselection` retain their existing arguments and receive the complete range list as an optional final argument. Returning `false` from `onbeforeselection` cancels the entire change. Read selection state through the methods rather than modifying `selectedRanges` directly.
+
+### Operations and lifecycle
+
+Formatting and value clearing target selected cells once and respect readonly cells. Space toggles selected checkboxes; radio columns change only the active radio cell, retaining their single-choice behavior and recording displaced values for undo. Selected row/column deletion uses exact indices, preserving intervening rows/columns; bulk operations undo as one action. Insertions and moves remap selections to existing cells. Newly inserted rows/columns remain unselected. Search, filtering, sorting, full data replacement, and worksheet changes reset selection. Pagination and lazy scrolling preserve logical selections, drawing only their visible portions.
+
+Frozen rows/columns, nested headers, sticky footers, and zoom retain independent selection outlines. The fill handle is hidden for disconnected ranges, and selection-based merging rejects them. These restrictions prevent filling or merging unselected gaps.
 
 ## Documentation
 

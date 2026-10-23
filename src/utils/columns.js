@@ -1,7 +1,17 @@
 import jSuites from 'jsuites';
 import dispatch from './dispatch.js';
 import { getColumnName } from './helpers.js';
-import { setHistory } from './history.js';
+import {
+    beginHistoryTransaction,
+    endHistoryTransaction,
+    getSelectionSnapshot,
+    getNestedHeadersSnapshot,
+    restoreNestedHeaders,
+    transformNestedHeaders,
+    remapSelectionSnapshot,
+    restoreSelectionSnapshot,
+    setHistory,
+} from './history.js';
 import { isColMerged } from './merges.js';
 import { createCell, updateTableReferences } from './internal.js';
 import { conditionalSelectionUpdate, updateCornerPosition, updateHighlightBorder, updateHighlightCopy } from './selection.js';
@@ -78,6 +88,8 @@ export const createCellHeader = function (colNumber) {
  */
 export const insertColumn = function (mixed, columnNumber, insertBefore, properties) {
     const obj = this;
+    const selectionBefore = obj.options.multipleSelection ? getSelectionSnapshot.call(obj) : null;
+    const nestedHeadersBefore = getNestedHeadersSnapshot.call(obj);
 
     // Configuration
     if (obj.options.allowInsertColumn != false) {
@@ -156,7 +168,7 @@ export const insertColumn = function (mixed, columnNumber, insertBefore, propert
         }
 
         // Onbeforeinsertcolumn
-        if (dispatch.call(obj, 'onbeforeinsertcolumn', obj, columns) === false) {
+        if (!obj._clipboardInsertApproved && dispatch.call(obj, 'onbeforeinsertcolumn', obj, columns) === false) {
             return false;
         }
 
@@ -173,6 +185,7 @@ export const insertColumn = function (mixed, columnNumber, insertBefore, propert
 
         // Insert before
         const columnIndex = !insertBefore ? columnNumber + 1 : columnNumber;
+        const selectionAfter = selectionBefore && remapSelectionSnapshot(selectionBefore, 0, (index) => (index >= columnIndex ? index + numOfColumns : index));
         obj.options.columns = injectArray(obj.options.columns, columnIndex, properties);
 
         // Open space in the containers
@@ -259,24 +272,16 @@ export const insertColumn = function (mixed, columnNumber, insertBefore, propert
             }
         }
 
-        // Adjust nested headers
-        if (obj.options.nestedHeaders && obj.options.nestedHeaders.length > 0 && obj.options.nestedHeaders[0] && obj.options.nestedHeaders[0][0]) {
-            for (let j = 0; j < obj.options.nestedHeaders.length; j++) {
-                const colspan = parseInt(obj.options.nestedHeaders[j][obj.options.nestedHeaders[j].length - 1].colspan) + numOfColumns;
-                obj.options.nestedHeaders[j][obj.options.nestedHeaders[j].length - 1].colspan = colspan;
-                obj.thead.children[j].children[obj.thead.children[j].children.length - 1].setAttribute('colspan', colspan);
-                let o = obj.thead.children[j].children[obj.thead.children[j].children.length - 1].getAttribute('data-column');
-                o = o.split(',');
-                for (let col = columnIndex; col < numOfColumns + columnIndex; col++) {
-                    o.push(col);
-                }
-                obj.thead.children[j].children[obj.thead.children[j].children.length - 1].setAttribute('data-column', o);
-            }
-        }
+        const nestedHeadersAfter = transformNestedHeaders(nestedHeadersBefore, 'insert', columnIndex, numOfColumns);
+        restoreNestedHeaders.call(obj, nestedHeadersAfter);
 
         // Keep history
         setHistory.call(obj, {
             action: 'insertColumn',
+            nestedHeadersBefore,
+            nestedHeadersAfter,
+            selectionBefore,
+            selectionAfter,
             columnNumber: columnNumber,
             numOfColumns: numOfColumns,
             insertBefore: insertBefore,
@@ -290,6 +295,7 @@ export const insertColumn = function (mixed, columnNumber, insertBefore, propert
 
         // Remove table references
         updateTableReferences.call(obj);
+        if (selectionAfter) restoreSelectionSnapshot.call(obj, selectionAfter);
 
         // Events
         dispatch.call(obj, 'oninsertcolumn', obj, columns);
@@ -303,6 +309,11 @@ export const insertColumn = function (mixed, columnNumber, insertBefore, propert
  */
 export const moveColumn = function (o, d) {
     const obj = this;
+    o = parseInt(o);
+    d = parseInt(d);
+    if (!obj.headers[o] || !obj.headers[d]) return false;
+    const selectionBefore = obj.options.multipleSelection ? getSelectionSnapshot.call(obj) : null;
+    const nestedHeadersBefore = getNestedHeadersSnapshot.call(obj);
 
     if (obj.options.mergeCells && Object.keys(obj.options.mergeCells).length > 0) {
         let insertBefore;
@@ -320,9 +331,6 @@ export const moveColumn = function (o, d) {
             }
         }
     }
-
-    o = parseInt(o);
-    d = parseInt(d);
 
     if (o > d) {
         obj.headerContainer.insertBefore(obj.headers[o], obj.headers[d]);
@@ -369,18 +377,70 @@ export const moveColumn = function (o, d) {
         }
     }
 
+    const selectionAfter =
+        selectionBefore &&
+        remapSelectionSnapshot(selectionBefore, 0, (index) => {
+            if (index === Number(o)) return Number(d);
+            if (o < d && index > o && index <= d) return index - 1;
+            if (o > d && index >= d && index < o) return index + 1;
+            return index;
+        });
+
+    const nestedHeadersAfter = transformNestedHeaders(nestedHeadersBefore, 'move', o, 1, d);
+    restoreNestedHeaders.call(obj, nestedHeadersAfter);
+
     // Keeping history of changes
     setHistory.call(obj, {
         action: 'moveColumn',
+        nestedHeadersBefore,
+        nestedHeadersAfter,
+        selectionBefore,
+        selectionAfter,
         oldValue: o,
         newValue: d,
     });
 
     // Update table references
     updateTableReferences.call(obj);
+    if (selectionAfter) restoreSelectionSnapshot.call(obj, selectionAfter);
 
     // Events
     dispatch.call(obj, 'onmovecolumn', obj, o, d, 1);
+};
+
+/**
+ * Delete precisely the selected columns as one cancellable, undoable action.
+ */
+const deleteSelectedColumns = function (selected) {
+    const obj = this;
+    if (obj.options.allowDeleteColumn === false) return false;
+    const indices = [...new Set(selected)].sort((a, b) => a - b);
+    const total = obj.headers.length;
+    if (indices.length === total) indices.pop();
+    if (!indices.length) return false;
+    if (dispatch.call(obj, 'onbeforedeletecolumn', obj, indices.slice()) === false) return false;
+
+    const hasMerges = indices.some((index) => isColMerged.call(obj, index).length);
+    if (hasMerges && !confirm(jSuites.translate('This action will destroy any existing merged cells. Are you sure?'))) return false;
+
+    const groups = [];
+    for (const index of indices) {
+        const last = groups[groups.length - 1];
+        if (last && index === last[0] + last[1]) last[1]++;
+        else groups.push([index, 1]);
+    }
+
+    beginHistoryTransaction.call(obj);
+    obj._deletingSelectedColumns = true;
+    try {
+        if (hasMerges) obj.destroyMerge();
+        for (let i = groups.length - 1; i >= 0; i--) deleteColumn.call(obj, groups[i][0], groups[i][1]);
+    } finally {
+        delete obj._deletingSelectedColumns;
+        endHistoryTransaction.call(obj);
+    }
+    dispatch.call(obj, 'ondeletecolumn', obj, indices);
+    return true;
 };
 
 /**
@@ -392,6 +452,13 @@ export const moveColumn = function (o, d) {
  */
 export const deleteColumn = function (columnNumber, numOfColumns) {
     const obj = this;
+    const selectionBefore = obj.options.multipleSelection ? getSelectionSnapshot.call(obj) : null;
+    const nestedHeadersBefore = getNestedHeadersSnapshot.call(obj);
+
+    if (columnNumber == null && obj.options.multipleSelection && !obj._deletingSelectedColumns) {
+        const indices = obj.getSelectedColumns(true);
+        if (indices.length) return deleteSelectedColumns.call(obj, indices);
+    }
 
     // Global Configuration
     if (obj.options.allowDeleteColumn != false) {
@@ -428,13 +495,16 @@ export const deleteColumn = function (columnNumber, numOfColumns) {
                 numOfColumns = obj.options.data[0].length - columnNumber;
             }
 
+            numOfColumns = Math.min(numOfColumns, obj.headers.length - 1);
+            if (numOfColumns <= 0) return false;
+
             const removedColumns = [];
             for (let i = 0; i < numOfColumns; i++) {
                 removedColumns.push(i + columnNumber);
             }
 
             // onbeforedeletecolumn
-            if (dispatch.call(obj, 'onbeforedeletecolumn', obj, removedColumns) === false) {
+            if (!obj._deletingSelectedColumns && dispatch.call(obj, 'onbeforedeletecolumn', obj, removedColumns) === false) {
                 return false;
             }
 
@@ -456,6 +526,14 @@ export const deleteColumn = function (columnNumber, numOfColumns) {
                         obj.destroyMerge();
                     }
                 }
+
+                const selectionAfter =
+                    selectionBefore &&
+                    remapSelectionSnapshot(selectionBefore, 0, (index) => {
+                        if (index < columnNumber) return index;
+                        if (index >= columnNumber + numOfColumns) return index - numOfColumns;
+                        return null;
+                    });
 
                 // Delete the column properties
                 const columns = obj.options.columns ? obj.options.columns.splice(columnNumber, numOfColumns) : undefined;
@@ -505,20 +583,18 @@ export const deleteColumn = function (columnNumber, numOfColumns) {
                 }
 
                 // Remove selection
-                conditionalSelectionUpdate.call(obj, 0, columnNumber, columnNumber + numOfColumns - 1);
+                if (!selectionBefore) conditionalSelectionUpdate.call(obj, 0, columnNumber, columnNumber + numOfColumns - 1);
 
-                // Adjust nested headers
-                if (obj.options.nestedHeaders && obj.options.nestedHeaders.length > 0 && obj.options.nestedHeaders[0] && obj.options.nestedHeaders[0][0]) {
-                    for (let j = 0; j < obj.options.nestedHeaders.length; j++) {
-                        const colspan = parseInt(obj.options.nestedHeaders[j][obj.options.nestedHeaders[j].length - 1].colspan) - numOfColumns;
-                        obj.options.nestedHeaders[j][obj.options.nestedHeaders[j].length - 1].colspan = colspan;
-                        obj.thead.children[j].children[obj.thead.children[j].children.length - 1].setAttribute('colspan', colspan);
-                    }
-                }
+                const nestedHeadersAfter = transformNestedHeaders(nestedHeadersBefore, 'delete', columnNumber, numOfColumns);
+                restoreNestedHeaders.call(obj, nestedHeadersAfter);
 
                 // Keeping history of changes
                 setHistory.call(obj, {
                     action: 'deleteColumn',
+                    nestedHeadersBefore,
+                    nestedHeadersAfter,
+                    selectionBefore,
+                    selectionAfter,
                     columnNumber: columnNumber,
                     numOfColumns: numOfColumns,
                     insertBefore: 1,
@@ -532,9 +608,10 @@ export const deleteColumn = function (columnNumber, numOfColumns) {
 
                 // Update table references
                 updateTableReferences.call(obj);
+                if (selectionAfter) restoreSelectionSnapshot.call(obj, selectionAfter);
 
                 // Delete
-                dispatch.call(obj, 'ondeletecolumn', obj, removedColumns);
+                if (!obj._deletingSelectedColumns) dispatch.call(obj, 'ondeletecolumn', obj, removedColumns);
             }
         } else {
             console.error('Jspreadsheet: It is not possible to delete the last column');

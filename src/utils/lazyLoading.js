@@ -199,12 +199,13 @@ export const loadValidation = function () {
 
     if (obj.selectedCell) {
         const firstChild = (obj.options.freezeRows && firstNonFrozenChild(obj)) || obj.tbody.firstChild;
-        const currentPage = parseInt(firstChild.getAttribute('data-y')) / 100;
+        if (!firstChild || !obj.rows[obj.selectedCell[3]]) return false;
+        const currentPage = Math.floor(parseInt(firstChild.getAttribute('data-y')) / 100);
         const selectedPage = parseInt(obj.selectedCell[3] / 100);
         const totalPages = parseInt(obj.rows.length / 100);
 
         if (currentPage != selectedPage && selectedPage <= totalPages) {
-            if (!Array.prototype.indexOf.call(obj.tbody.children, obj.rows[obj.selectedCell[3]].element)) {
+            if (Array.prototype.indexOf.call(obj.tbody.children, obj.rows[obj.selectedCell[3]].element) === -1) {
                 obj.loadPage(selectedPage);
                 return true;
             }

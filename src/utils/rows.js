@@ -4,7 +4,14 @@ import { createCell, updateTableReferences } from './internal.js';
 import dispatch from './dispatch.js';
 import { isRowMerged } from './merges.js';
 import { conditionalSelectionUpdate, getSelectedRows, updateCornerPosition, updateHighlightBorder, updateHighlightCopy } from './selection.js';
-import { setHistory } from './history.js';
+import {
+    beginHistoryTransaction,
+    endHistoryTransaction,
+    getSelectionSnapshot,
+    remapSelectionSnapshot,
+    restoreSelectionSnapshot,
+    setHistory,
+} from './history.js';
 import { updateFrozenRowOffsets } from './freeze.js';
 import { getColumnNameFromId } from './internalHelpers.js';
 
@@ -90,6 +97,7 @@ export const createRow = function (j, data) {
  */
 export const insertRow = function (mixed, rowNumber, insertBefore) {
     const obj = this;
+    const selectionBefore = obj.options.multipleSelection ? getSelectionSnapshot.call(obj) : null;
 
     // Configuration
     if (obj.options.allowInsertRow != false) {
@@ -138,7 +146,7 @@ export const insertRow = function (mixed, rowNumber, insertBefore) {
         }
 
         // Onbeforeinsertrow
-        if (dispatch.call(obj, 'onbeforeinsertrow', obj, onbeforeinsertrowRecords) === false) {
+        if (!obj._clipboardInsertApproved && dispatch.call(obj, 'onbeforeinsertrow', obj, onbeforeinsertrowRecords) === false) {
             return false;
         }
 
@@ -168,6 +176,7 @@ export const insertRow = function (mixed, rowNumber, insertBefore) {
 
         // Insertbefore
         const rowIndex = !insertBefore ? rowNumber + 1 : rowNumber;
+        const selectionAfter = selectionBefore && remapSelectionSnapshot(selectionBefore, 1, (index) => (index >= rowIndex ? index + numOfRows : index));
 
         // Keep the current data
         const currentRecords = obj.records.splice(rowIndex);
@@ -226,6 +235,8 @@ export const insertRow = function (mixed, rowNumber, insertBefore) {
         // Keep history
         setHistory.call(obj, {
             action: 'insertRow',
+            selectionBefore,
+            selectionAfter,
             rowNumber: rowNumber,
             numOfRows: numOfRows,
             insertBefore: insertBefore,
@@ -236,6 +247,7 @@ export const insertRow = function (mixed, rowNumber, insertBefore) {
 
         // Remove table references
         updateTableReferences.call(obj);
+        if (selectionAfter) restoreSelectionSnapshot.call(obj, selectionAfter);
 
         // Events
         dispatch.call(obj, 'oninsertrow', obj, onbeforeinsertrowRecords);
@@ -249,6 +261,10 @@ export const insertRow = function (mixed, rowNumber, insertBefore) {
  */
 export const moveRow = function (o, d, ignoreDom) {
     const obj = this;
+    o = parseInt(o);
+    d = parseInt(d);
+    if (!obj.rows[o] || !obj.rows[d]) return false;
+    const selectionBefore = obj.options.multipleSelection ? getSelectionSnapshot.call(obj) : null;
 
     if (obj.options.mergeCells && Object.keys(obj.options.mergeCells).length > 0) {
         let insertBefore;
@@ -288,7 +304,7 @@ export const moveRow = function (o, d, ignoreDom) {
                 obj.tbody.insertBefore(obj.rows[o].element, obj.rows[d].element.nextSibling);
             }
         } else {
-            obj.tbody.removeChild(obj.rows[o].element);
+            obj.rows[o].element.remove();
         }
     }
 
@@ -315,18 +331,68 @@ export const moveRow = function (o, d, ignoreDom) {
         obj.page(obj.pageNumber);
     }
 
+    const selectionAfter =
+        selectionBefore &&
+        remapSelectionSnapshot(selectionBefore, 1, (index) => {
+            if (index === Number(o)) return Number(d);
+            if (o < d && index > o && index <= d) return index - 1;
+            if (o > d && index >= d && index < o) return index + 1;
+            return index;
+        });
+
     // Keeping history of changes
     setHistory.call(obj, {
         action: 'moveRow',
+        selectionBefore,
+        selectionAfter,
         oldValue: o,
         newValue: d,
     });
 
     // Update table references
     updateTableReferences.call(obj);
+    if (selectionAfter) restoreSelectionSnapshot.call(obj, selectionAfter);
 
     // Events
     dispatch.call(obj, 'onmoverow', obj, parseInt(o), parseInt(d), 1);
+};
+
+/**
+ * Delete precisely the selected rows as one cancellable, undoable action.
+ */
+const deleteSelectedRows = function (selected) {
+    const obj = this;
+    if (obj.options.allowDeleteRow === false) return false;
+    const indices = [...new Set(selected)].sort((a, b) => a - b);
+    const total = obj.rows.length;
+    if (obj.options.allowDeletingAllRows !== true && indices.length === total) indices.pop();
+    if (!indices.length) return false;
+    if (dispatch.call(obj, 'onbeforedeleterow', obj, indices.slice()) === false) return false;
+
+    const hasMerges = indices.some((index) => isRowMerged.call(obj, index).length);
+    if (hasMerges && !confirm(jSuites.translate('This action will destroy any existing merged cells. Are you sure?'))) return false;
+    const hasSearch = obj.options.search === true && obj.results && obj.results.length !== obj.rows.length;
+    if (hasSearch && !confirm(jSuites.translate('This action will clear your search results. Are you sure?'))) return false;
+
+    const groups = [];
+    for (const index of indices) {
+        const last = groups[groups.length - 1];
+        if (last && index === last[0] + last[1]) last[1]++;
+        else groups.push([index, 1]);
+    }
+
+    beginHistoryTransaction.call(obj);
+    obj._deletingSelectedRows = true;
+    try {
+        if (hasMerges) obj.destroyMerge();
+        if (hasSearch) obj.resetSearch();
+        for (let i = groups.length - 1; i >= 0; i--) deleteRow.call(obj, groups[i][0], groups[i][1]);
+    } finally {
+        delete obj._deletingSelectedRows;
+        endHistoryTransaction.call(obj);
+    }
+    dispatch.call(obj, 'ondeleterow', obj, indices);
+    return true;
 };
 
 /**
@@ -338,6 +404,12 @@ export const moveRow = function (o, d, ignoreDom) {
  */
 export const deleteRow = function (rowNumber, numOfRows) {
     const obj = this;
+    const selectionBefore = obj.options.multipleSelection ? getSelectionSnapshot.call(obj) : null;
+
+    if (rowNumber == null && obj.options.multipleSelection && !obj._deletingSelectedRows) {
+        const indices = obj.getSelectedRows(false);
+        if (indices.length) return deleteSelectedRows.call(obj, indices);
+    }
 
     // Global Configuration
     if (obj.options.allowDeleteRow != false) {
@@ -377,7 +449,7 @@ export const deleteRow = function (rowNumber, numOfRows) {
                 onbeforedeleterowRecords.push(i + rowNumber);
             }
 
-            if (dispatch.call(obj, 'onbeforedeleterow', obj, onbeforedeleterowRecords) === false) {
+            if (!obj._deletingSelectedRows && dispatch.call(obj, 'onbeforedeleterow', obj, onbeforedeleterowRecords) === false) {
                 return false;
             }
 
@@ -418,6 +490,14 @@ export const deleteRow = function (rowNumber, numOfRows) {
                     console.error('Jspreadsheet: It is not possible to delete the last row');
                 }
 
+                const selectionAfter =
+                    selectionBefore &&
+                    remapSelectionSnapshot(selectionBefore, 1, (index) => {
+                        if (index < rowNumber) return index;
+                        if (index >= rowNumber + numOfRows) return index - numOfRows;
+                        return null;
+                    });
+
                 // Remove node
                 for (let row = rowNumber; row < rowNumber + numOfRows; row++) {
                     if (Array.prototype.indexOf.call(obj.tbody.children, obj.rows[row].element) >= 0) {
@@ -447,11 +527,13 @@ export const deleteRow = function (rowNumber, numOfRows) {
                 }
 
                 // Remove selection
-                conditionalSelectionUpdate.call(obj, 1, rowNumber, rowNumber + numOfRows - 1);
+                if (!selectionBefore) conditionalSelectionUpdate.call(obj, 1, rowNumber, rowNumber + numOfRows - 1);
 
                 // Keep history
                 setHistory.call(obj, {
                     action: 'deleteRow',
+                    selectionBefore,
+                    selectionAfter,
                     rowNumber: rowNumber,
                     numOfRows: numOfRows,
                     insertBefore: 1,
@@ -462,9 +544,10 @@ export const deleteRow = function (rowNumber, numOfRows) {
 
                 // Remove table references
                 updateTableReferences.call(obj);
+                if (selectionAfter) restoreSelectionSnapshot.call(obj, selectionAfter);
 
                 // Events
-                dispatch.call(obj, 'ondeleterow', obj, onbeforedeleterowRecords);
+                if (!obj._deletingSelectedRows) dispatch.call(obj, 'ondeleterow', obj, onbeforedeleterowRecords);
             }
         } else {
             console.error('Jspreadsheet: It is not possible to delete the last row');
@@ -523,7 +606,7 @@ export const setHeight = function (row, height, oldHeight) {
             // Set height
             for (let i = 0; i < row.length; i++) {
                 if (!oldHeight[i]) {
-                    oldHeight[i] = parseInt(obj.rows[row[i]].element.getAttribute('height'));
+                    oldHeight[i] = parseFloat(obj.rows[row[i]].element.style.height) || parseInt(obj.rows[row[i]].element.getAttribute('height'));
 
                     if (!oldHeight[i]) {
                         oldHeight[i] = obj.rows[row[i]].element.getBoundingClientRect().height;
@@ -544,7 +627,7 @@ export const setHeight = function (row, height, oldHeight) {
         } else {
             // Oldheight
             if (!oldHeight) {
-                oldHeight = obj.rows[row].element.getAttribute('height');
+                oldHeight = parseFloat(obj.rows[row].element.style.height) || obj.rows[row].element.getAttribute('height');
 
                 if (!oldHeight) {
                     const rect = obj.rows[row].element.getBoundingClientRect();

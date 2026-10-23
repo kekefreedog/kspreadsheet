@@ -4,6 +4,18 @@ description: Explore Jspreadsheet’s clipboard methods and events, enabling sea
 
 # Data Grid Clipboard
 
+## Disconnected selections in kspreadsheet
+
+Enable `multipleSelection` on the worksheet. `copyPreserveGaps` defaults to `true`; when copying separate ranges, unselected coordinates appear as blank fields in TSV output, preserving horizontal and vertical spacing. No unselected cell value is included.
+
+Setting `copyPreserveGaps: false` packs selected cells left within each selected row and omits unselected rows. Ragged rows are padded with blanks in external clipboard output.
+
+Internal clipboard metadata retains source values/formulas, styles, and a membership mask. An empty selected cell overwrites its destination; an unselected gap leaves its destination unchanged. This metadata is shared by worksheets in the same loaded library instance and matched against normalized clipboard text. Other applications and separate browser pages receive ordinary TSV blanks, so their paste behavior controls whether those blanks overwrite data.
+
+A scalar paste fills each selected cell. A rectangular block can repeat across disconnected destination ranges only when each range's visible width and height are whole multiples of the source dimensions. Incompatible destinations return `false` before any mutation. A scalar may target a merged cell once; block pastes into merged destinations are rejected when ambiguous. Expansion during sparse paste is rejected on filtered or merged worksheets. Readonly cells remain unchanged.
+
+Copy cancellation or clipboard failure prevents cut from clearing values. `oncopy` receives all copied ranges after its existing arguments; `onbeforepaste` receives the destination ranges after its existing arguments. Each multi-range paste is one undo step. Full-sheet CSV/XLSX downloads continue to export the complete worksheet.
+
 ## Overview
 
 The clipboard in Jspreadsheet offers a comprehensive set of features that facilitate copying and pasting data between Jspreadsheet instances and other spreadsheet software, such as Excel or Google Sheets. These features include automatic formula updates, data overwriting during paste actions, and custom event handling.

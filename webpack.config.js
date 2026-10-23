@@ -63,8 +63,9 @@ const webpack = {
             'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
         },
         port: 8000,
+        host: 'localhost',
         devMiddleware: {
-            publicPath: 'https://localhost:3000/',
+            publicPath: '/',
         },
         hot: 'only',
     },

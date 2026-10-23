@@ -31,28 +31,38 @@
     color: var(--jss_header_color_highlighted, #000);
 }
 
-.jss_worksheet .highlight {
+.jss_worksheet .jss_freezed.highlight,
+.jss_worksheet .jss_row_freezed.highlight {
     background-color: var(--jss_selection, rgba(0, 0, 0, 0.05));
 }
 
-.jss_worksheet .highlight-top {
+.jss_worksheet .jss_freezed.highlight-top,
+.jss_worksheet .jss_row_freezed.highlight-top {
     border-top: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
-.jss_worksheet .highlight-left {
+.jss_worksheet .jss_freezed.highlight-left,
+.jss_worksheet .jss_row_freezed.highlight-left {
     border-left: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
-.jss_worksheet .highlight-right {
+.jss_worksheet .jss_freezed.highlight-right,
+.jss_worksheet .jss_row_freezed.highlight-right {
     border-right: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
-.jss_worksheet .highlight-bottom {
+.jss_worksheet .jss_freezed.highlight-bottom,
+.jss_worksheet .jss_row_freezed.highlight-bottom {
     border-bottom: 1px solid var(--jss_border_color_highlighted, #000);
 }
 
 .jss_worksheet .highlight-selected {
     background-color: var(--jss_cursor, #eee);
+}
+
+.jss_border_main {
+    border-color: var(--jss_border_color_highlighted, #000);
+    background-color: var(--jss_selection, #00000015);
 }
 
 .jss_pagination > div > div {

@@ -20,6 +20,7 @@ import { getData, getDataFromRange, getValue, getValueFromCoords, setData, setVa
 import { cutControls, scrollControls, wheelControls } from './events.js';
 import { updateStickyEdgeClasses } from './freeze.js';
 import {
+    addSelectionFromCoords,
     getHighlighted,
     getRange,
     getSelected,
@@ -29,6 +30,7 @@ import {
     isSelected,
     resetSelection,
     selectAll,
+    setSelections,
     updateSelectionFromCoords,
 } from './selection.js';
 import { deleteRow, getHeight, getRowData, hideRow, insertRow, moveRow, setHeight, setRowData, showRow } from './rows.js';
@@ -64,6 +66,10 @@ const setWorksheetFunctions = function (worksheet) {
 
 const createTable = function () {
     let obj = this;
+
+    obj.options.multipleSelection = obj.options.multipleSelection === true;
+    obj.options.copyPreserveGaps = obj.options.copyPreserveGaps !== false;
+    obj.selectedRanges = [];
 
     setWorksheetFunctions(obj);
 
@@ -687,6 +693,13 @@ export const deleteWorksheet = function (position) {
 
 const worksheetPublicMethods = [
     ['selectAll', selectAll],
+    ['setSelections', setSelections],
+    [
+        'addSelectionFromCoords',
+        function (x1, y1, x2, y2, toggle = false) {
+            return addSelectionFromCoords.call(this, x1, y1, x2, y2, undefined, toggle);
+        },
+    ],
     [
         'updateSelectionFromCoords',
         function (x1, y1, x2, y2) {

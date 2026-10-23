@@ -51,6 +51,12 @@ jobs:
             - name: Run tests
               run: npx mocha --recursive --require=mocha.config.js
 
+            - name: Install browser for selection tests
+              run: npx playwright install --with-deps chromium
+
+            - name: Run browser selection tests
+              run: npm run test:browser
+
             - name: Publish to npm
               # prepublishOnly rebuilds dist once more, guaranteeing a fresh artifact.
               run: npm publish

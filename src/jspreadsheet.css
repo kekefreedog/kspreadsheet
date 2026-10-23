@@ -769,19 +769,23 @@
 }
 
 /* Frozen columns: keep legacy dashed borders since the overlay div doesn't cover them */
-.jss_worksheet .jss_freezed.copying-top {
+.jss_worksheet .jss_freezed.copying-top,
+.jss_worksheet .jss_row_freezed.copying-top {
     border-top: 2px dashed #000;
 }
 
-.jss_worksheet .jss_freezed.copying-left {
+.jss_worksheet .jss_freezed.copying-left,
+.jss_worksheet .jss_row_freezed.copying-left {
     border-left: 2px dashed #000;
 }
 
-.jss_worksheet .jss_freezed.copying-right {
+.jss_worksheet .jss_freezed.copying-right,
+.jss_worksheet .jss_row_freezed.copying-right {
     border-right: 2px dashed #000;
 }
 
-.jss_worksheet .jss_freezed.copying-bottom {
+.jss_worksheet .jss_freezed.copying-bottom,
+.jss_worksheet .jss_row_freezed.copying-bottom {
     border-bottom: 2px dashed #000;
 }
 
@@ -889,7 +893,9 @@
     pointer-events: none;
     opacity: 0.6;
     box-sizing: border-box;
-    z-index: 2;
+    /* Stay above regular cells but below sticky cells, including merges which extend
+       beyond the frozen row/column band into the scrolling area. */
+    z-index: 0;
     /* Hidden off-screen by default (mirrors .jss_corner) so the overlay never flashes at its
        in-flow position (as a plain `position: absolute` box with no top/left, it renders
        right after the table — bottom-left of the grid) before JS ever explicitly positions
@@ -905,7 +911,8 @@
 }
 
 .jss_border_copying {
-    background-size: 8px 1px, 8px 1px, 1px 8px, 1px 8px;
+    background-size: 8px var(--jss-selection-top, 1px), 8px var(--jss-selection-bottom, 1px), var(--jss-selection-left, 1px) 8px,
+        var(--jss-selection-right, 1px) 8px;
     background-position: 0 0, 0 100%, 0 0, 100% 0;
     background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
     background-image: linear-gradient(to right, #fff 50%, #444 50%), linear-gradient(to right, #fff 50%, #444 50%),

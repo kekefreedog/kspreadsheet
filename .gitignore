@@ -3,3 +3,5 @@
 node_modules
 /vue/package-lock.json
 .cl*
+/test-results/
+/playwright-report/

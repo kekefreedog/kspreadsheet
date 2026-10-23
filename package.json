@@ -59,6 +59,7 @@
         "@babel/preset-env": "^7.29.7",
         "@babel/register": "^7.29.7",
         "@eslint/js": "^9.34.0",
+        "@playwright/test": "^1.64.1",
         "c8": "^7.13.0",
         "chai": "^4.3.7",
         "copy-webpack-plugin": "^11.0.0",
@@ -101,6 +102,7 @@
         "build:css": "cp src/jspreadsheet.css dist/jspreadsheet.css && cp src/jspreadsheet.themes.css dist/jspreadsheet.themes.css",
         "dist": "cross-env NODE_ENV=production webpack --config webpack.config.js && npm run build:css",
         "test": "npm run build && mocha --recursive --require=mocha.config.js",
-        "prepublishOnly": "npm run dist"
+        "prepublishOnly": "npm run dist",
+        "test:browser": "playwright test"
     }
 }

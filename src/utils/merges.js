@@ -123,14 +123,15 @@ export const setMerge = function (cellName, colspan, rowspan, ignoreHistoryAndEv
     let test = false;
 
     if (!cellName) {
-        if (!obj.highlighted.length) {
+        if (obj.getHighlighted().length > 1) return false;
+        if (!obj.highlighted || !obj.highlighted.length) {
             alert(jSuites.translate('No cells selected'));
             return null;
         } else {
-            const x1 = parseInt(obj.highlighted[0].getAttribute('data-x'));
-            const y1 = parseInt(obj.highlighted[0].getAttribute('data-y'));
-            const x2 = parseInt(obj.highlighted[obj.highlighted.length - 1].getAttribute('data-x'));
-            const y2 = parseInt(obj.highlighted[obj.highlighted.length - 1].getAttribute('data-y'));
+            const x1 = parseInt(obj.highlighted[0].element.getAttribute('data-x'));
+            const y1 = parseInt(obj.highlighted[0].element.getAttribute('data-y'));
+            const x2 = parseInt(obj.highlighted[obj.highlighted.length - 1].element.getAttribute('data-x'));
+            const y2 = parseInt(obj.highlighted[obj.highlighted.length - 1].element.getAttribute('data-y'));
             cellName = getColumnNameFromId([x1, y1]);
             colspan = x2 - x1 + 1;
             rowspan = y2 - y1 + 1;

@@ -7,9 +7,13 @@ import { setHistory } from './history.js';
 import { updatePagination } from './pagination.js';
 import { setMerge } from './merges.js';
 import { getCoordsFromRange } from './helpers.js';
+import { getHighlighted, isSelected } from './selection.js';
 
 export const setData = function (data) {
     const obj = this;
+
+    obj._lastSelectionGesture = null;
+    if (obj.selectedCell && obj.highlightBorder) obj.resetSelection();
 
     // Update data
     if (data) {
@@ -359,13 +363,31 @@ export const getData = function (highlighted, processed, delimiter, asJson) {
         })
     );
     const y = obj.options.data.length;
+    const ranges = highlighted ? getHighlighted.call(obj) : [];
+    const preserveGaps = ranges.length > 1 && obj.options.copyPreserveGaps !== false;
+    const left = preserveGaps ? Math.min(...ranges.map((range) => range[0])) : 0;
+    const top = preserveGaps ? Math.min(...ranges.map((range) => range[1])) : 0;
+    const right = preserveGaps ? Math.max(...ranges.map((range) => range[2])) + 1 : x;
+    const bottom = preserveGaps ? Math.max(...ranges.map((range) => range[3])) + 1 : y;
 
     // Go through the columns to get the data
-    for (let j = 0; j < y; j++) {
+    for (let j = top; j < bottom; j++) {
         px = 0;
-        for (let i = 0; i < x; i++) {
+        for (let i = left; i < right; i++) {
+            const selected =
+                !highlighted ||
+                (isSelected.call(obj, i, j) &&
+                    obj.records[j][i].element.style.display !== 'none' &&
+                    obj.rows[j].element.style.display !== 'none' &&
+                    obj.headers[i].style.display !== 'none' &&
+                    obj.options.columns[i]?.type !== 'hidden');
+            if (preserveGaps && !selected) {
+                if (!dataset[py]) dataset[py] = [];
+                dataset[py][px++] = '';
+                continue;
+            }
             // Cell selected or fullset
-            if (!highlighted || obj.records[j][i].element.classList.contains('highlight')) {
+            if (selected) {
                 // Get value
                 if (!dataset[py]) {
                     dataset[py] = [];

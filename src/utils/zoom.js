@@ -29,9 +29,10 @@ export const setZoom = function (zoomValue) {
     if (zoomValue >= this.zoomMin && zoomValue <= this.zoomMax) {
         const updateOverlays = () => {
             if (this.highlightBorder) {
-                import('./selection.js').then(({ updateHighlightBorder, updateHighlightCopy }) => {
+                import('./selection.js').then(({ updateHighlightBorder, updateHighlightCopy, updateCornerPosition }) => {
                     updateHighlightBorder.call(this);
                     updateHighlightCopy.call(this);
+                    updateCornerPosition.call(this);
                 });
             }
         };

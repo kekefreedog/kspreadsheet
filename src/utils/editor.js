@@ -1,7 +1,7 @@
 import jSuites from 'jsuites';
 
 import dispatch from './dispatch.js';
-import { getMask, isFormula, updateCell } from './internal.js';
+import { getMask, isFormula, updateCell, updateFormulaChain, updateTable } from './internal.js';
 import { setHistory } from './history.js';
 
 /**
@@ -384,19 +384,41 @@ export const setCheckRadioValue = function () {
     const obj = this;
 
     const records = [];
-    const keys = Object.keys(obj.highlighted);
-    for (let i = 0; i < keys.length; i++) {
-        const x = obj.highlighted[i].element.getAttribute('data-x');
-        const y = obj.highlighted[i].element.getAttribute('data-y');
+    const selected = obj.getSelected();
+    for (let i = 0; i < selected.length; i++) {
+        const x = Number(selected[i].element.getAttribute('data-x'));
+        const y = Number(selected[i].element.getAttribute('data-y'));
 
         const cellType = (obj.options.columns && obj.options.columns[x] && obj.options.columns[x].type) || obj.options.defaultCellType || null;
         if (cellType == 'checkbox' || cellType == 'radio') {
+            if (selected[i].element.classList.contains('readonly')) continue;
+            // A radio column is one group. Space changes its active cell, while checkbox
+            // cells can all be toggled independently. Record displaced radios for undo.
+            let radioValues;
+            if (cellType === 'radio') {
+                if (x !== Number(obj.selectedCell[0]) || y !== Number(obj.selectedCell[1])) continue;
+                radioValues = obj.options.data.map((row) => row[x]);
+                if (radioValues.some((value, row) => row !== y && value && obj.records[row][x].element.classList.contains('readonly'))) continue;
+            }
             // Update cell
-            records.push(updateCell.call(obj, x, y, !obj.options.data[y][x]));
+            const record = updateCell.call(obj, x, y, !obj.options.data[y][x]);
+            if (Object.prototype.hasOwnProperty.call(record, 'value')) {
+                if (radioValues) {
+                    radioValues.forEach((oldValue, row) => {
+                        if (row !== y && oldValue !== obj.options.data[row][x]) {
+                            records.push({ x, y: row, col: x, row, value: obj.options.data[row][x], oldValue });
+                            updateFormulaChain.call(obj, x, row, records);
+                        }
+                    });
+                }
+                records.push(record);
+                updateFormulaChain.call(obj, x, y, records);
+            }
         }
     }
 
     if (records.length) {
+        updateTable.call(obj);
         // Update history
         setHistory.call(obj, {
             action: 'setValue',

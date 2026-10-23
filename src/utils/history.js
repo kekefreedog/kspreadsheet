@@ -1,26 +1,171 @@
 import dispatch from './dispatch.js';
 import { injectArray } from './internalHelpers.js';
-import { updateTableReferences } from './internal.js';
+import { createNestedHeader, updateTableReferences } from './internal.js';
 import { setMerge } from './merges.js';
 import { updateOrder, updateOrderArrow } from './orderBy.js';
-import { conditionalSelectionUpdate } from './selection.js';
+import { conditionalSelectionUpdate, getHighlighted, setSelections } from './selection.js';
 
 /**
- * Initializes a new history record for undo/redo
- *
- * @return null
+ * Copy logical selection state without retaining mutable range arrays or DOM nodes.
+ */
+export const getSelectionSnapshot = function () {
+    return {
+        ranges: getHighlighted.call(this).map((range) => range.slice()),
+        active: this.selectedCell ? this.selectedCell.map(Number) : null,
+    };
+};
+
+export const restoreSelectionSnapshot = function (snapshot) {
+    if (!snapshot) return;
+
+    const obj = this;
+    const ignoreEvents = obj.parent.ignoreEvents;
+    obj.parent.ignoreEvents = true;
+    try {
+        if (!snapshot.ranges.length || !obj.rows.length || !obj.headers.length) {
+            obj.resetSelection();
+        } else {
+            const active = snapshot.active;
+            const index = active
+                ? snapshot.ranges.findIndex((range) => active[0] >= range[0] && active[0] <= range[2] && active[1] >= range[1] && active[1] <= range[3])
+                : snapshot.ranges.length - 1;
+            setSelections.call(obj, snapshot.ranges, index < 0 ? snapshot.ranges.length - 1 : index, undefined, active);
+        }
+    } finally {
+        obj.parent.ignoreEvents = ignoreEvents;
+    }
+};
+
+/**
+ * Follow existing cells across structural edits. New rows/columns inside a range
+ * stay unselected; deleting or moving an axis can split that range into fragments.
+ */
+export const remapSelectionSnapshot = function (snapshot, axis, mapIndex) {
+    const ranges = [];
+    for (const range of snapshot.ranges) {
+        const indices = [];
+        for (let index = range[axis]; index <= range[axis + 2]; index++) {
+            const mapped = mapIndex(index);
+            if (mapped != null) indices.push(mapped);
+        }
+        indices.sort((a, b) => a - b);
+        let segment;
+        for (const index of indices) {
+            if (segment && index === segment[axis + 2] + 1) {
+                segment[axis + 2] = index;
+            } else {
+                segment = range.slice();
+                segment[axis] = segment[axis + 2] = index;
+                ranges.push(segment);
+            }
+        }
+    }
+    let active = snapshot.active && snapshot.active.slice();
+    if (active) {
+        active[axis] = mapIndex(active[axis]);
+        active[axis + 2] = mapIndex(active[axis + 2]);
+        const containing = ranges.find(
+            (range) => active[axis] != null && active[0] >= range[0] && active[0] <= range[2] && active[1] >= range[1] && active[1] <= range[3]
+        );
+        if (!containing) {
+            active = ranges.length ? ranges[ranges.length - 1].slice() : null;
+        } else if (
+            active[axis + 2] == null ||
+            active[2] < containing[0] ||
+            active[2] > containing[2] ||
+            active[3] < containing[1] ||
+            active[3] > containing[3]
+        ) {
+            active = containing.slice();
+        }
+    }
+    return { ranges, active };
+};
+
+const getMergeSnapshot = (obj) => Object.fromEntries(Object.entries(obj.options.mergeCells || {}).map(([name, range]) => [name, range.slice(0, 2)]));
+
+/**
+ * Keep nested header group membership aligned with inserted/deleted/moved columns.
+ */
+export const getNestedHeadersSnapshot = function () {
+    return (this.options.nestedHeaders || []).map((row) => row.map((group) => ({ ...group })));
+};
+
+export const transformNestedHeaders = function (snapshot, operation, index, count, destination) {
+    return snapshot.map((row) => {
+        const columns = [];
+        for (const group of row) {
+            for (let i = 0; i < Number(group.colspan || 1); i++) columns.push(group);
+        }
+        if (operation === 'insert') {
+            const group = columns[index] || columns[columns.length - 1] || { title: '', colspan: 1 };
+            columns.splice(index, 0, ...Array(count).fill(group));
+        } else if (operation === 'delete') {
+            columns.splice(index, count);
+        } else {
+            columns.splice(destination, 0, columns.splice(index, 1)[0]);
+        }
+        const groups = [];
+        let previous;
+        for (const column of columns) {
+            if (previous === column && groups.length) groups[groups.length - 1].colspan++;
+            else groups.push({ ...column, colspan: 1 });
+            previous = column;
+        }
+        return groups;
+    });
+};
+
+export const restoreNestedHeaders = function (snapshot) {
+    if (!snapshot) return;
+    const obj = this;
+    obj.thead.querySelectorAll('.jss_nested').forEach((row) => row.remove());
+    obj.options.nestedHeaders = snapshot.map((row) => row.map((group) => ({ ...group })));
+    for (const row of obj.options.nestedHeaders) obj.thead.insertBefore(createNestedHeader.call(obj, row), obj.headerContainer);
+};
+
+/**
+ * Group all mutations belonging to one user action into a single undo step.
+ */
+export const beginHistoryTransaction = function () {
+    if (this.ignoreHistory) return;
+    if (this.historyTransaction) {
+        this.historyTransaction.depth++;
+    } else {
+        this.historyTransaction = { depth: 1, records: [], selectionBefore: getSelectionSnapshot.call(this), mergesBefore: getMergeSnapshot(this) };
+    }
+};
+
+export const endHistoryTransaction = function () {
+    const transaction = this.historyTransaction;
+    if (!transaction || --transaction.depth > 0) return;
+    delete this.historyTransaction;
+    if (transaction.records.length) {
+        setHistory.call(this, {
+            action: 'batch',
+            records: transaction.records,
+            selectionBefore: transaction.selectionBefore,
+            selectionAfter: getSelectionSnapshot.call(this),
+            mergesBefore: transaction.mergesBefore,
+            mergesAfter: getMergeSnapshot(this),
+        });
+    }
+};
+
+/**
+ * Initializes a new history record for undo/redo.
  */
 export const setHistory = function (changes) {
     const obj = this;
+    if (obj.ignoreHistory == true) return;
 
-    if (obj.ignoreHistory != true) {
-        // Increment and get the current history index
+    changes.selectionBefore = changes.selectionBefore || getSelectionSnapshot.call(obj);
+    changes.selectionAfter = changes.selectionAfter || getSelectionSnapshot.call(obj);
+    if (obj.historyTransaction) {
+        obj.historyTransaction.records.push(changes);
+    } else {
         const index = ++obj.historyIndex;
-
-        // Slice the array to discard undone changes
-        obj.history = obj.history = obj.history.slice(0, index + 1);
-
-        // Keep history
+        obj.history = obj.history.slice(0, index);
         obj.history[index] = changes;
     }
 };
@@ -44,7 +189,7 @@ const historyProcessRow = function (type, historyRecord) {
         const numOfRows = historyRecord.numOfRows;
         // Remove nodes
         for (let j = rowIndex; j < numOfRows + rowIndex; j++) {
-            obj.rows[j].element.parentNode.removeChild(obj.rows[j].element);
+            obj.rows[j].element.remove();
         }
         // Remove references
         obj.records.splice(rowIndex, numOfRows);
@@ -163,174 +308,84 @@ const historyProcessColumn = function (type, historyRecord) {
         }
     }
 
-    // Adjust nested headers
-    if (obj.options.nestedHeaders && obj.options.nestedHeaders.length > 0 && obj.options.nestedHeaders[0] && obj.options.nestedHeaders[0][0]) {
-        for (let j = 0; j < obj.options.nestedHeaders.length; j++) {
-            let colspan;
-
-            if (type == 1) {
-                colspan = parseInt(obj.options.nestedHeaders[j][obj.options.nestedHeaders[j].length - 1].colspan) - historyRecord.numOfColumns;
-            } else {
-                colspan = parseInt(obj.options.nestedHeaders[j][obj.options.nestedHeaders[j].length - 1].colspan) + historyRecord.numOfColumns;
-            }
-            obj.options.nestedHeaders[j][obj.options.nestedHeaders[j].length - 1].colspan = colspan;
-            obj.thead.children[j].children[obj.thead.children[j].children.length - 1].setAttribute('colspan', colspan);
-        }
-    }
-
     updateTableReferences.call(obj);
 };
 
 /**
- * Undo last action
+ * Replay a single record or an atomic group without publishing partial selections.
  */
-export const undo = function () {
+const applyHistoryRecord = function (record, backwards) {
     const obj = this;
-
-    // Ignore events and history
-    const ignoreEvents = obj.parent.ignoreEvents ? true : false;
-    const ignoreHistory = obj.ignoreHistory ? true : false;
-
-    obj.parent.ignoreEvents = true;
-    obj.ignoreHistory = true;
-
-    // Records
-    const records = [];
-
-    // Update cells
-    let historyRecord;
-
-    if (obj.historyIndex >= 0) {
-        // History
-        historyRecord = obj.history[obj.historyIndex--];
-
-        if (historyRecord.action == 'insertRow') {
-            historyProcessRow.call(obj, 1, historyRecord);
-        } else if (historyRecord.action == 'deleteRow') {
-            historyProcessRow.call(obj, 0, historyRecord);
-        } else if (historyRecord.action == 'insertColumn') {
-            historyProcessColumn.call(obj, 1, historyRecord);
-        } else if (historyRecord.action == 'deleteColumn') {
-            historyProcessColumn.call(obj, 0, historyRecord);
-        } else if (historyRecord.action == 'moveRow') {
-            obj.moveRow(historyRecord.newValue, historyRecord.oldValue);
-        } else if (historyRecord.action == 'moveColumn') {
-            obj.moveColumn(historyRecord.newValue, historyRecord.oldValue);
-        } else if (historyRecord.action == 'setMerge') {
-            obj.removeMerge(historyRecord.column, historyRecord.data);
-        } else if (historyRecord.action == 'setStyle') {
-            obj.setStyle(historyRecord.oldValue, null, null, 1);
-        } else if (historyRecord.action == 'setWidth') {
-            obj.setWidth(historyRecord.column, historyRecord.oldValue);
-        } else if (historyRecord.action == 'setHeight') {
-            obj.setHeight(historyRecord.row, historyRecord.oldValue);
-        } else if (historyRecord.action == 'setHeader') {
-            obj.setHeader(historyRecord.column, historyRecord.oldValue);
-        } else if (historyRecord.action == 'setComments') {
-            obj.setComments(historyRecord.oldValue);
-        } else if (historyRecord.action == 'orderBy') {
-            let rows = [];
-            for (let j = 0; j < historyRecord.rows.length; j++) {
-                rows[historyRecord.rows[j]] = j;
-            }
-            updateOrderArrow.call(obj, historyRecord.column, historyRecord.order ? 0 : 1);
-            updateOrder.call(obj, rows);
-        } else if (historyRecord.action == 'setValue') {
-            // Redo for changes in cells
-            for (let i = 0; i < historyRecord.records.length; i++) {
-                records.push({
-                    x: historyRecord.records[i].x,
-                    y: historyRecord.records[i].y,
-                    value: historyRecord.records[i].oldValue,
-                });
-
-                if (historyRecord.oldStyle) {
-                    obj.resetStyle(historyRecord.oldStyle);
-                }
-            }
-            // Update records
-            obj.setValue(records);
-
-            // Update selection
-            if (historyRecord.selection) {
-                obj.updateSelectionFromCoords(historyRecord.selection[0], historyRecord.selection[1], historyRecord.selection[2], historyRecord.selection[3]);
-            }
+    if (record.action === 'batch') {
+        const mergesChanged = JSON.stringify(record.mergesBefore) !== JSON.stringify(record.mergesAfter);
+        if (mergesChanged) obj.destroyMerge();
+        const records = backwards ? record.records.slice().reverse() : record.records;
+        for (const child of records) applyHistoryRecord.call(obj, child, backwards);
+        if (mergesChanged) {
+            const merges = backwards ? record.mergesBefore : record.mergesAfter;
+            for (const [cell, range] of Object.entries(merges || {})) setMerge.call(obj, cell, range[0], range[1], true);
         }
+    } else if (record.action === 'insertRow' || record.action === 'deleteRow') {
+        historyProcessRow.call(obj, (record.action === 'insertRow') === backwards ? 1 : 0, record);
+    } else if (record.action === 'insertColumn' || record.action === 'deleteColumn') {
+        historyProcessColumn.call(obj, (record.action === 'insertColumn') === backwards ? 1 : 0, record);
+    } else if (record.action === 'moveRow' || record.action === 'moveColumn') {
+        obj[record.action](backwards ? record.newValue : record.oldValue, backwards ? record.oldValue : record.newValue);
+    } else if (record.action === 'setMerge') {
+        if (backwards) obj.removeMerge(record.column, record.data);
+        else setMerge.call(obj, record.column, record.colspan, record.rowspan, 1);
+    } else if (record.action === 'setStyle') {
+        obj.setStyle(backwards ? record.oldValue : record.newValue, null, null, 1);
+    } else if (record.action === 'setWidth') {
+        obj.setWidth(record.column, backwards ? record.oldValue : record.newValue);
+    } else if (record.action === 'setHeight') {
+        obj.setHeight(record.row, backwards ? record.oldValue : record.newValue);
+    } else if (record.action === 'setHeader') {
+        obj.setHeader(record.column, backwards ? record.oldValue : record.newValue);
+    } else if (record.action === 'setComments') {
+        obj.setComments(backwards ? record.oldValue : record.newValue);
+    } else if (record.action === 'orderBy') {
+        const rows = [];
+        if (backwards) {
+            for (let j = 0; j < record.rows.length; j++) rows[record.rows[j]] = j;
+        }
+        updateOrderArrow.call(obj, record.column, backwards ? (record.order ? 0 : 1) : record.order);
+        updateOrder.call(obj, backwards ? rows : record.rows);
+    } else if (record.action === 'setValue') {
+        obj.setValue(backwards ? record.records.map((record) => ({ x: record.x, y: record.y, value: record.oldValue })) : record.records);
+        if (record.oldStyle) obj.resetStyle(backwards ? record.oldStyle : record.newStyle);
     }
-    obj.parent.ignoreEvents = ignoreEvents;
-    obj.ignoreHistory = ignoreHistory;
-
-    // Events
-    dispatch.call(obj, 'onundo', obj, historyRecord);
+    const nestedHeaders = backwards ? record.nestedHeadersBefore : record.nestedHeadersAfter;
+    if (nestedHeaders) restoreNestedHeaders.call(obj, nestedHeaders);
 };
 
-/**
- * Redo previously undone action
- */
-export const redo = function () {
+const replayHistory = function (backwards) {
     const obj = this;
+    const index = backwards ? obj.historyIndex : obj.historyIndex + 1;
+    if (index < 0 || index >= obj.history.length) return;
 
-    // Ignore events and history
-    const ignoreEvents = obj.parent.ignoreEvents ? true : false;
-    const ignoreHistory = obj.ignoreHistory ? true : false;
-
+    const record = obj.history[index];
+    const ignoreEvents = obj.parent.ignoreEvents;
+    const ignoreHistory = obj.ignoreHistory;
     obj.parent.ignoreEvents = true;
     obj.ignoreHistory = true;
-
-    // Records
-    var records = [];
-
-    // Update cells
-    let historyRecord;
-
-    if (obj.historyIndex < obj.history.length - 1) {
-        // History
-        historyRecord = obj.history[++obj.historyIndex];
-
-        if (historyRecord.action == 'insertRow') {
-            historyProcessRow.call(obj, 0, historyRecord);
-        } else if (historyRecord.action == 'deleteRow') {
-            historyProcessRow.call(obj, 1, historyRecord);
-        } else if (historyRecord.action == 'insertColumn') {
-            historyProcessColumn.call(obj, 0, historyRecord);
-        } else if (historyRecord.action == 'deleteColumn') {
-            historyProcessColumn.call(obj, 1, historyRecord);
-        } else if (historyRecord.action == 'moveRow') {
-            obj.moveRow(historyRecord.oldValue, historyRecord.newValue);
-        } else if (historyRecord.action == 'moveColumn') {
-            obj.moveColumn(historyRecord.oldValue, historyRecord.newValue);
-        } else if (historyRecord.action == 'setMerge') {
-            setMerge.call(obj, historyRecord.column, historyRecord.colspan, historyRecord.rowspan, 1);
-        } else if (historyRecord.action == 'setStyle') {
-            obj.setStyle(historyRecord.newValue, null, null, 1);
-        } else if (historyRecord.action == 'setWidth') {
-            obj.setWidth(historyRecord.column, historyRecord.newValue);
-        } else if (historyRecord.action == 'setHeight') {
-            obj.setHeight(historyRecord.row, historyRecord.newValue);
-        } else if (historyRecord.action == 'setHeader') {
-            obj.setHeader(historyRecord.column, historyRecord.newValue);
-        } else if (historyRecord.action == 'setComments') {
-            obj.setComments(historyRecord.newValue);
-        } else if (historyRecord.action == 'orderBy') {
-            updateOrderArrow.call(obj, historyRecord.column, historyRecord.order);
-            updateOrder.call(obj, historyRecord.rows);
-        } else if (historyRecord.action == 'setValue') {
-            obj.setValue(historyRecord.records);
-            // Redo for changes in cells
-            for (let i = 0; i < historyRecord.records.length; i++) {
-                if (historyRecord.oldStyle) {
-                    obj.resetStyle(historyRecord.newStyle);
-                }
-            }
-            // Update selection
-            if (historyRecord.selection) {
-                obj.updateSelectionFromCoords(historyRecord.selection[0], historyRecord.selection[1], historyRecord.selection[2], historyRecord.selection[3]);
-            }
-        }
+    try {
+        applyHistoryRecord.call(obj, record, backwards);
+        const snapshot = backwards ? record.selectionBefore : record.selectionAfter;
+        if (snapshot) restoreSelectionSnapshot.call(obj, snapshot);
+        else if (record.selection) obj.updateSelectionFromCoords(...record.selection);
+        obj.historyIndex += backwards ? -1 : 1;
+    } finally {
+        obj.parent.ignoreEvents = ignoreEvents;
+        obj.ignoreHistory = ignoreHistory;
     }
-    obj.parent.ignoreEvents = ignoreEvents;
-    obj.ignoreHistory = ignoreHistory;
+    dispatch.call(obj, backwards ? 'onundo' : 'onredo', obj, record);
+};
 
-    // Events
-    dispatch.call(obj, 'onredo', obj, historyRecord);
+export const undo = function () {
+    replayHistory.call(this, true);
+};
+
+export const redo = function () {
+    replayHistory.call(this, false);
 };

@@ -1,4 +1,5 @@
 import jspreadsheet from './index.js';
+import { createMultiSelectionScenarios } from './manual/multiSelection.js';
 
 import './jspreadsheet.css';
 import 'jsuites/dist/jsuites.css';
@@ -14,7 +15,7 @@ window.jss = jspreadsheet;
  * and can be exported as JSON/Markdown at the end.
  */
 
-const STORAGE_KEY = 'kspreadsheet_manual_qa_v13_imagetype';
+const STORAGE_KEY = 'kspreadsheet_manual_qa_v14_all';
 
 const root = document.getElementById('root');
 
@@ -939,16 +940,33 @@ const scenarios = [
     },
 ];
 
+scenarios.push(...createMultiSelectionScenarios(jspreadsheet, root, extra));
+
 // ---- QA harness UI ----
 
 function loadState() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch (e) {
-        // ignore corrupt storage
+    const read = (key) => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(key));
+            if (saved && Number.isInteger(saved.index) && saved.index >= 0 && Array.isArray(saved.results)) return saved;
+        } catch (e) {
+            // Ignore corrupt storage without losing results from the other test run.
+        }
+        return null;
+    };
+    const saved = read(STORAGE_KEY);
+    if (saved) return saved;
+
+    // Import both previous runs once; the old suite URL now opens this same complete list.
+    const original = read('kspreadsheet_manual_qa_v13_imagetype');
+    const multiple = read('kspreadsheet_manual_qa_v13_imagetype_multi_selection_v1');
+    const results = new Map();
+    for (const result of [...(original?.results || []), ...(multiple?.results || [])]) {
+        if (result && typeof result.name === 'string') results.set(result.name, result);
     }
-    return { index: 0, results: [] };
+    const migrated = { index: Math.min(original?.index || 0, scenarios.length - 1), results: Array.from(results.values()) };
+    saveState(migrated);
+    return migrated;
 }
 
 function saveState(state) {
@@ -965,6 +983,10 @@ panel.style.cssText = `
     padding: 12px 16px; box-shadow: 0 -2px 10px rgba(0,0,0,0.4);
 `;
 document.body.appendChild(panel);
+// Keep the sheet and scenario controls reachable above the fixed result panel.
+new ResizeObserver(() => {
+    document.body.style.paddingBottom = panel.offsetHeight + 24 + 'px';
+}).observe(panel);
 
 function clearMount() {
     window.jss.destroyAll();
@@ -1027,6 +1049,22 @@ function renderScenario() {
     header.innerHTML = `<strong>Test ${state.index + 1} / ${scenarios.length}: ${scenario.name}</strong>`;
     header.style.marginBottom = '6px';
 
+    const picker = document.createElement('select');
+    picker.setAttribute('aria-label', 'Choose manual test');
+    picker.style.cssText = 'max-width:100%;margin-bottom:8px;';
+    scenarios.forEach((item, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${index + 1}. ${item.name}`;
+        picker.appendChild(option);
+    });
+    picker.value = state.index;
+    picker.addEventListener('change', () => {
+        state.index = Number(picker.value);
+        saveState(state);
+        renderScenario();
+    });
+
     const check = document.createElement('div');
     check.innerText = scenario.check;
     check.style.cssText = 'margin-bottom: 8px; color: #ccc; max-width: 900px;';
@@ -1061,7 +1099,12 @@ function renderScenario() {
         renderScenario();
     });
 
-    panel.append(header, check, comment, yesBtn, noBtn);
+    const restartBtn = document.createElement('button');
+    restartBtn.textContent = 'Restart this test';
+    restartBtn.style.marginLeft = '8px';
+    restartBtn.addEventListener('click', renderScenario);
+
+    panel.append(header, picker, check, comment, yesBtn, noBtn, restartBtn);
 }
 
 renderScenario();

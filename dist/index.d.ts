@@ -5,6 +5,8 @@ declare const jspreadsheet: jspreadsheet.JSpreadsheet;
 
 declare namespace jspreadsheet {
     type CellValue = string | number | boolean;
+    /** Inclusive worksheet coordinates: left, top, right, bottom. */
+    type SelectionRange = [number, number, number, number];
 
     type DropdownSourceItem =
         | string
@@ -550,7 +552,8 @@ declare namespace jspreadsheet {
             instance: WorksheetInstance,
             copiedText: { value: CellValue }[][],
             colIndex: number | string,
-            rowIndex: number | string
+            rowIndex: number | string,
+            ranges?: SelectionRange[]
         ) => undefined | boolean | string;
 
         /**
@@ -585,7 +588,8 @@ declare namespace jspreadsheet {
             borderTopIndex: number,
             borderRightIndex: number,
             borderBottomIndex: number,
-            origin: Event | undefined
+            origin: Event | undefined,
+            ranges?: SelectionRange[]
         ) => false | undefined;
 
         /**
@@ -665,7 +669,8 @@ declare namespace jspreadsheet {
             instance: WorksheetInstance,
             selectedRange: [number, number, number, number],
             copiedData: string,
-            cut: boolean | undefined
+            cut: boolean | undefined,
+            ranges?: SelectionRange[]
         ) => string | false | undefined;
 
         /**
@@ -888,7 +893,8 @@ declare namespace jspreadsheet {
             borderTopIndex: number,
             borderRightIndex: number,
             borderBottomIndex: number,
-            origin: Event | undefined
+            origin: Event | undefined,
+            ranges?: SelectionRange[]
         ) => void;
 
         /**
@@ -1203,6 +1209,12 @@ declare namespace jspreadsheet {
          * @default true
          */
         selectionCopy?: boolean;
+
+        /** Enable Ctrl/Cmd-click and drag to select disconnected cells and ranges. @default false */
+        multipleSelection?: boolean;
+
+        /** Preserve blank gaps when copying disconnected ranges. False packs selected cells per row. @default true */
+        copyPreserveGaps?: boolean;
 
         /**
          * Pin the footer at the bottom of the scrollable viewport instead of scrolling away with the body.
@@ -1708,6 +1720,12 @@ declare namespace jspreadsheet {
          */
         getHighlighted: () => [number, number, number, number][];
 
+        /** Replace all selected ranges. More than one range requires multipleSelection. Events may cancel the change. */
+        setSelections: (ranges: SelectionRange[], activeRangeIndex?: number, origin?: Event) => false | undefined;
+
+        /** Add a range, or toggle its membership when toggle is true. */
+        addSelectionFromCoords: (x1: number | null, y1: number | null, x2?: number | null, y2?: number | null, toggle?: boolean) => false | undefined;
+
         /**
          * Get the innerHTML of a cell.
          * @param cell - Cell name.
@@ -2114,6 +2132,9 @@ declare namespace jspreadsheet {
         selectedCell: undefined | null | [number, number, number, number] | [string, string, string, string];
 
         selectedContainer: undefined | null | [number, number, number, number];
+
+        /** Normalized non-overlapping ranges. Read via getHighlighted(); change via setSelections(). */
+        selectedRanges: SelectionRange[];
 
         /**
          * Cells that currently have "autocomplete selection".

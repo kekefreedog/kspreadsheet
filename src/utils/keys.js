@@ -1,5 +1,13 @@
+import { updateSelectionFromCoords } from './selection.js';
 import { updateScroll } from './internal.js';
 import { loadDown, loadPage, loadUp, loadValidation } from './lazyLoading.js';
+
+/** Commit keyboard movement only after the cancellable selection event accepts it. */
+const updateNavigationSelection = function (obj, previous, shiftKey) {
+    const next = obj.selectedCell.slice();
+    obj.selectedCell = previous.slice();
+    return updateSelectionFromCoords.call(obj, ...next, undefined, shiftKey ? 'extend' : 'replace');
+};
 
 // Same "blank" convention already used elsewhere in this codebase (e.g. updateTable's
 // spare-row/column detection): a falsy data value (undefined, null, '', 0) counts as empty.
@@ -112,6 +120,8 @@ const upVisible = function (group, direction) {
 
 export const up = function (shiftKey, ctrlKey) {
     const obj = this;
+    if (!obj.selectedCell) return;
+    const selectionBefore = obj.selectedCell.slice();
 
     if (shiftKey) {
         if (obj.selectedCell[3] > 0) {
@@ -126,21 +136,21 @@ export const up = function (shiftKey, ctrlKey) {
     }
 
     // Update selection
-    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
 
     // Change page
     if (obj.options.lazyLoading == true) {
         if (obj.selectedCell[1] == 0 || obj.selectedCell[3] == 0) {
             loadPage.call(obj, 0);
-            obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+            if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
         } else {
             if (loadValidation.call(obj)) {
-                obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+                if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
             } else {
                 const item = parseInt(obj.tbody.firstChild.getAttribute('data-y'));
                 if (obj.selectedCell[1] - item < 30) {
                     loadUp.call(obj);
-                    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+                    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
                 }
             }
         }
@@ -251,6 +261,8 @@ const rightVisible = function (group, direction) {
 
 export const right = function (shiftKey, ctrlKey) {
     const obj = this;
+    if (!obj.selectedCell) return;
+    const selectionBefore = obj.selectedCell.slice();
 
     if (shiftKey) {
         if (obj.selectedCell[2] < obj.headers.length - 1) {
@@ -264,7 +276,7 @@ export const right = function (shiftKey, ctrlKey) {
         obj.selectedCell[3] = obj.selectedCell[1];
     }
 
-    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
     updateScroll.call(obj, 2);
 };
 
@@ -364,6 +376,8 @@ const downVisible = function (group, direction) {
 
 export const down = function (shiftKey, ctrlKey) {
     const obj = this;
+    if (!obj.selectedCell) return;
+    const selectionBefore = obj.selectedCell.slice();
 
     if (shiftKey) {
         if (obj.selectedCell[3] < obj.records.length - 1) {
@@ -377,21 +391,21 @@ export const down = function (shiftKey, ctrlKey) {
         obj.selectedCell[3] = obj.selectedCell[1];
     }
 
-    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
 
     // Change page
     if (obj.options.lazyLoading == true) {
         if (obj.selectedCell[1] == obj.records.length - 1 || obj.selectedCell[3] == obj.records.length - 1) {
             loadPage.call(obj, -1);
-            obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+            if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
         } else {
             if (loadValidation.call(obj)) {
-                obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+                if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
             } else {
                 const item = parseInt(obj.tbody.lastChild.getAttribute('data-y'));
                 if (item - obj.selectedCell[3] < 30) {
                     loadDown.call(obj);
-                    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+                    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
                 }
             }
         }
@@ -501,6 +515,8 @@ const leftVisible = function (group, direction) {
 
 export const left = function (shiftKey, ctrlKey) {
     const obj = this;
+    if (!obj.selectedCell) return;
+    const selectionBefore = obj.selectedCell.slice();
 
     if (shiftKey) {
         if (obj.selectedCell[2] > 0) {
@@ -514,12 +530,14 @@ export const left = function (shiftKey, ctrlKey) {
         obj.selectedCell[3] = obj.selectedCell[1];
     }
 
-    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
     updateScroll.call(obj, 0);
 };
 
 export const first = function (shiftKey, ctrlKey) {
     const obj = this;
+    if (!obj.selectedCell) return;
+    const selectionBefore = obj.selectedCell.slice();
 
     if (shiftKey) {
         if (ctrlKey) {
@@ -547,12 +565,14 @@ export const first = function (shiftKey, ctrlKey) {
         }
     }
 
-    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
     updateScroll.call(obj, 1);
 };
 
 export const last = function (shiftKey, ctrlKey) {
     const obj = this;
+    if (!obj.selectedCell) return;
+    const selectionBefore = obj.selectedCell.slice();
 
     if (shiftKey) {
         if (ctrlKey) {
@@ -580,6 +600,6 @@ export const last = function (shiftKey, ctrlKey) {
         }
     }
 
-    obj.updateSelectionFromCoords(obj.selectedCell[0], obj.selectedCell[1], obj.selectedCell[2], obj.selectedCell[3]);
+    if (updateNavigationSelection(obj, selectionBefore, shiftKey) === false) return;
     updateScroll.call(obj, 3);
 };

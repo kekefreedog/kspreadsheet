@@ -48,7 +48,13 @@ const createWorksheets = async function (spreadsheet, options, el) {
             },
             onchange: function (element, instance, tabIndex) {
                 if (spreadsheet.worksheets.length != 0 && spreadsheet.worksheets[tabIndex]) {
-                    updateToolbar(spreadsheet.worksheets[tabIndex]);
+                    const worksheet = spreadsheet.worksheets[tabIndex];
+                    const current = libraryBase.jspreadsheet.current;
+                    if (current && current !== worksheet && current.parent === spreadsheet) {
+                        current.resetSelection();
+                    }
+                    libraryBase.jspreadsheet.current = worksheet;
+                    updateToolbar(worksheet);
                 }
             },
         };

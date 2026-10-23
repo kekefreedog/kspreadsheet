@@ -1,6 +1,7 @@
 import jSuites from 'jsuites';
 import { getCellNameFromCoords } from './helpers.js';
 import { getWorksheetInstance } from './internal.js';
+import { beginHistoryTransaction, endHistoryTransaction } from './history.js';
 
 const setItemStatus = function (toolbarItem, worksheet) {
     if (worksheet.options.editable != false) {
@@ -204,13 +205,10 @@ export const getDefault = function () {
         onclick: function () {
             const worksheet = getActive();
 
+            if (worksheet.getHighlighted().length > 1) return;
+
             if (worksheet.selectedCell && confirm(jSuites.translate('The merged cells will retain the value of the top-left cell only. Are you sure?'))) {
-                const selectedRange = [
-                    Math.min(worksheet.selectedCell[0], worksheet.selectedCell[2]),
-                    Math.min(worksheet.selectedCell[1], worksheet.selectedCell[3]),
-                    Math.max(worksheet.selectedCell[0], worksheet.selectedCell[2]),
-                    Math.max(worksheet.selectedCell[1], worksheet.selectedCell[3]),
-                ];
+                const selectedRange = worksheet.getHighlighted()[0];
 
                 let cell = getCellNameFromCoords(selectedRange[0], selectedRange[1]);
                 if (worksheet.records[selectedRange[1]][selectedRange[0]].element.getAttribute('data-merged')) {
@@ -252,88 +250,88 @@ export const getDefault = function () {
         onchange: function (a, b, c, d) {
             const worksheet = getActive();
 
-            if (worksheet.selectedCell) {
-                const selectedRange = [
-                    Math.min(worksheet.selectedCell[0], worksheet.selectedCell[2]),
-                    Math.min(worksheet.selectedCell[1], worksheet.selectedCell[3]),
-                    Math.max(worksheet.selectedCell[0], worksheet.selectedCell[2]),
-                    Math.max(worksheet.selectedCell[1], worksheet.selectedCell[3]),
-                ];
+            beginHistoryTransaction.call(worksheet);
+            try {
+                const visibleCells = new Set(worksheet.getSelected(true));
+                for (const selectedRange of worksheet.getHighlighted()) {
+                    let type = d;
 
-                let type = d;
+                    if (selectedRange) {
+                        // Default options
+                        let thickness = b.thickness || 1;
+                        let color = b.color || 'black';
+                        const borderStyle = b.style || 'solid';
 
-                if (selectedRange) {
-                    // Default options
-                    let thickness = b.thickness || 1;
-                    let color = b.color || 'black';
-                    const borderStyle = b.style || 'solid';
-
-                    if (borderStyle === 'double') {
-                        thickness += 2;
-                    }
-
-                    let style = {};
-
-                    // Matrix
-                    let px = selectedRange[0];
-                    let py = selectedRange[1];
-                    let ux = selectedRange[2];
-                    let uy = selectedRange[3];
-
-                    const setBorder = function (columnName, i, j) {
-                        let border = ['', '', '', ''];
-
-                        if (
-                            ((type === 'border_top' || type === 'border_outer') && j === py) ||
-                            ((type === 'border_inner' || type === 'border_horizontal') && j > py) ||
-                            type === 'border_all'
-                        ) {
-                            border[0] = 'border-top: ' + thickness + 'px ' + borderStyle + ' ' + color;
-                        } else {
-                            border[0] = 'border-top: ';
+                        if (borderStyle === 'double') {
+                            thickness += 2;
                         }
 
-                        if ((type === 'border_all' || type === 'border_right' || type === 'border_outer') && i === ux) {
-                            border[1] = 'border-right: ' + thickness + 'px ' + borderStyle + ' ' + color;
-                        } else {
-                            border[1] = 'border-right: ';
-                        }
+                        let style = {};
 
-                        if ((type === 'border_all' || type === 'border_bottom' || type === 'border_outer') && j === uy) {
-                            border[2] = 'border-bottom: ' + thickness + 'px ' + borderStyle + ' ' + color;
-                        } else {
-                            border[2] = 'border-bottom: ';
-                        }
+                        // Matrix
+                        let px = selectedRange[0];
+                        let py = selectedRange[1];
+                        let ux = selectedRange[2];
+                        let uy = selectedRange[3];
 
-                        if (
-                            ((type === 'border_left' || type === 'border_outer') && i === px) ||
-                            ((type === 'border_inner' || type === 'border_vertical') && i > px) ||
-                            type === 'border_all'
-                        ) {
-                            border[3] = 'border-left: ' + thickness + 'px ' + borderStyle + ' ' + color;
-                        } else {
-                            border[3] = 'border-left: ';
-                        }
+                        const setBorder = function (columnName, i, j) {
+                            let border = ['', '', '', ''];
 
-                        style[columnName] = border.join(';');
-                    };
+                            if (
+                                ((type === 'border_top' || type === 'border_outer') && j === py) ||
+                                ((type === 'border_inner' || type === 'border_horizontal') && j > py) ||
+                                type === 'border_all'
+                            ) {
+                                border[0] = 'border-top: ' + thickness + 'px ' + borderStyle + ' ' + color;
+                            } else {
+                                border[0] = 'border-top: ';
+                            }
 
-                    for (let j = selectedRange[1]; j <= selectedRange[3]; j++) {
-                        // Row - py - uy
-                        for (let i = selectedRange[0]; i <= selectedRange[2]; i++) {
-                            // Col - px - ux
-                            setBorder(getCellNameFromCoords(i, j), i, j);
+                            if ((type === 'border_all' || type === 'border_right' || type === 'border_outer') && i === ux) {
+                                border[1] = 'border-right: ' + thickness + 'px ' + borderStyle + ' ' + color;
+                            } else {
+                                border[1] = 'border-right: ';
+                            }
 
-                            if (worksheet.records[j][i].element.getAttribute('data-merged')) {
-                                setBorder(getCellNameFromCoords(selectedRange[0], selectedRange[1]), i, j);
+                            if ((type === 'border_all' || type === 'border_bottom' || type === 'border_outer') && j === uy) {
+                                border[2] = 'border-bottom: ' + thickness + 'px ' + borderStyle + ' ' + color;
+                            } else {
+                                border[2] = 'border-bottom: ';
+                            }
+
+                            if (
+                                ((type === 'border_left' || type === 'border_outer') && i === px) ||
+                                ((type === 'border_inner' || type === 'border_vertical') && i > px) ||
+                                type === 'border_all'
+                            ) {
+                                border[3] = 'border-left: ' + thickness + 'px ' + borderStyle + ' ' + color;
+                            } else {
+                                border[3] = 'border-left: ';
+                            }
+
+                            style[columnName] = border.join(';');
+                        };
+
+                        for (let j = selectedRange[1]; j <= selectedRange[3]; j++) {
+                            // Row - py - uy
+                            for (let i = selectedRange[0]; i <= selectedRange[2]; i++) {
+                                // Col - px - ux
+                                if (!visibleCells.has(getCellNameFromCoords(i, j))) continue;
+                                setBorder(getCellNameFromCoords(i, j), i, j);
+
+                                if (worksheet.records[j][i].element.getAttribute('data-merged')) {
+                                    setBorder(getCellNameFromCoords(selectedRange[0], selectedRange[1]), i, j);
+                                }
                             }
                         }
-                    }
 
-                    if (Object.keys(style)) {
-                        worksheet.setStyle(style);
+                        if (Object.keys(style)) {
+                            worksheet.setStyle(style);
+                        }
                     }
                 }
+            } finally {
+                endHistoryTransaction.call(worksheet);
             }
         },
         onload: function (a, b) {

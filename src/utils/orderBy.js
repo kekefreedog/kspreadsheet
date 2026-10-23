@@ -1,5 +1,5 @@
 import jSuites from 'jsuites';
-import { setHistory } from './history.js';
+import { getSelectionSnapshot, setHistory } from './history.js';
 import dispatch from './dispatch.js';
 import { updateTableReferences } from './internal.js';
 import { loadPage } from './lazyLoading.js';
@@ -30,6 +30,7 @@ export const updateOrderArrow = function (column, order) {
  */
 export const updateOrder = function (rows) {
     const obj = this;
+    if (obj.options.multipleSelection) obj.resetSelection();
 
     // History
     let data = [];
@@ -87,6 +88,7 @@ export const updateOrder = function (rows) {
  */
 export const orderBy = function (column, order) {
     const obj = this;
+    const selectionBefore = getSelectionSnapshot.call(obj);
 
     if (column >= 0) {
         // Merged cells
@@ -161,6 +163,8 @@ export const orderBy = function (column, order) {
         // Save history
         setHistory.call(obj, {
             action: 'orderBy',
+            selectionBefore,
+            selectionAfter: obj.options.multipleSelection ? { ranges: [], active: null } : selectionBefore,
             rows: newValue,
             column: column,
             order: order,
