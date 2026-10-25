@@ -6,6 +6,29 @@ description: Learn how to load, manage, and manipulate worksheet data in Jspread
 
 This section details the methods, events, and settings for loading, updating, and managing data in Jspreadsheet data grids.
 
+## CSV and XLSX downloads (kspreadsheet)
+
+```javascript
+worksheet.download(true, false, 'csv', { filename: 'Submission' });
+await worksheet.download(true, false, 'xlsx', {
+    filename: 'Submission',
+    onlyVisibleSheet: true,
+});
+```
+
+The optional fourth argument is `DownloadOptions`:
+
+| Option | Behavior |
+| --- | --- |
+| `filename?: string` | Overrides the worksheet's `csvFileName`, then `worksheetName`, then `export`. The matching format extension is appended only if missing. |
+| `onlyVisibleSheet?: boolean` | XLSX only: `true` exports the currently selected tab; `false` exports all tabs in order. Omit it to export the receiving worksheet, preserving existing behavior. |
+
+Filenames, worksheet selection, and XLSX sheet names are captured before asynchronous generation. Restoring worksheet options or switching tabs while an export is pending does not change them. Options apply only to this call. For an all-tab export, wait for spreadsheet `onload` first.
+
+XLSX sheet names come from `worksheetName`; invalid characters, names longer than 31 characters, and duplicate names are normalized for Excel without renaming the UI tabs. Images and configured column widths are preserved for each exported worksheet. XLSX retains its existing header/raw-value behavior regardless of `includeHeaders` and `processed`. CSV always exports the receiving worksheet and honors its existing header/processed flags.
+
+XLSX returns `Promise<void>`; CSV returns `void`. Both can be called with `await`.
+
 ## Loading the Data
 
 ### Formats

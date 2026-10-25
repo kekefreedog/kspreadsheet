@@ -137,7 +137,7 @@ worksheet.setSelections([
 
 Hold Ctrl (Windows/Linux) or Cmd (macOS) to add or remove a cell or range. A modified drag starting on an unselected cell adds a rectangle; starting on a selected cell subtracts it. Dragging back restores cells outside the current rectangle. After release, Ctrl/Cmd+Shift-click or drag extends or shrinks that last add/remove operation from its original anchor. Shift alone extends the active selected range; plain click or arrow navigation starts a single selection, and Escape keeps only the active cell. Row, column, and nested-header selections support the same modifiers.
 
-`multipleSelection` defaults to `false` for compatibility. `copyPreserveGaps` defaults to `true`: copying A1 and C3 produces a 3×3 clipboard grid with blank gaps. Set it to `false` to pack selected cells left within each selected row and omit unselected rows. Copying within this library retains a mask so pasted gaps leave destination values untouched; other applications receive ordinary blank fields.
+`multipleSelection` defaults to `true`; set it to `false` to restore single-range selection. `copyPreserveGaps` defaults to `true`: copying A1 and C3 produces a 3×3 clipboard grid with blank gaps. Set it to `false` to pack selected cells left within each selected row and omit unselected rows. Copying within this library retains a mask so pasted gaps leave destination values untouched; other applications receive ordinary blank fields.
 
 Formatting, Delete, checkbox toggles, and compatible pastes act on the selected cells. A scalar can fill disconnected ranges; a block must fit each destination range exactly or by whole repetitions. Disconnected ranges cannot be merged or autofilled. See [selection behavior](docs/jspreadsheet/docs/selection.md) and [clipboard behavior](docs/jspreadsheet/docs/clipboard.md).
 
@@ -178,6 +178,52 @@ Open [the complete manual test runner](http://localhost:8000/) for all existing 
 -   https://bossanova.uk/jspreadsheet/docs/examples/jquery
 
 ## Jspreadsheet Changelog
+
+### Custom — Unreleased: download options
+
+-   Capture download filenames before asynchronous XLSX generation so restoring worksheet options does not rename pending downloads;
+-   Add a final `DownloadOptions` argument with `filename` for CSV/XLSX and `onlyVisibleSheet` for XLSX;
+-   Export the selected tab with `onlyVisibleSheet: true`, or every tab in workbook order with `false`; omitting the option keeps the existing receiving-worksheet behavior;
+-   Preserve worksheet names in XLSX, normalizing invalid/duplicate Excel names, and keep image embedding and configured column widths for every exported sheet.
+
+```javascript
+// Same basename for both formats. The matching extension is added only if missing.
+worksheet.download(true, false, 'csv', { filename: 'Rodeo_Submission' });
+await worksheet.download(true, false, 'xlsx', { filename: 'Rodeo_Submission' });
+
+// Export the currently selected tab, even when calling download on another worksheet.
+await worksheet.download(true, false, 'xlsx', {
+    filename: 'Selected_template.xlsx',
+    onlyVisibleSheet: true,
+});
+
+// Export all tabs into one workbook.
+await worksheet.download(true, false, 'xlsx', {
+    filename: 'All_templates.xlsx',
+    onlyVisibleSheet: false,
+});
+```
+
+The filename priority is `options.filename`, worksheet `csvFileName`, worksheet `worksheetName`, then `export`. An explicit filename applies only to that download; worksheet options and tab labels are unchanged. CSV always exports the receiving worksheet. XLSX continues to include headers and raw values regardless of the first two flags. Await spreadsheet `onload` before exporting all tabs, since worksheet creation is asynchronous.
+
+### Custom 2.9.0 — Massy
+
+-   Add disconnected cell and range selections with `multipleSelection: true` (default `false`), plus `setSelections` and `addSelectionFromCoords` APIs;
+-   Use Cmd/Ctrl-click or drag to add/remove selections, including row, column, and nested headers; Cmd/Ctrl+Shift extends or shrinks the last add/remove operation;
+-   Preserve clipboard gaps by default with `copyPreserveGaps: true`, with an optional compact mode; internal pastes preserve formulas, styles, and unselected destination cells;
+-   Apply formatting, deletion, compatible pastes, and undo/redo across selected ranges while respecting readonly and merged cells; add Cmd/Ctrl+Shift+Z for redo;
+-   Fix centered-table selection offsets, ghost borders around merged/frozen cells, and fill-handle alignment when zooming; preserve selections across pagination and lazy loading;
+-   Replace the direct `eval` check for formula references with an explicit lookup, fixing repeated references and collisions with global variable names;
+-   Update dependencies, remove the unused `xlsx` dependency, modernize the webpack asset hook, and add browser regression tests plus a combined 37-scenario manual QA runner;
+
+[Release notes](https://github.com/kekefreedog/kspreadsheet/releases/tag/v2.9.0)
+
+### Custom 2.8.0 — Épinay-sur-Seine
+
+-   Expose the existing `stickyFooter?: boolean` option in the `WorksheetOptions` TypeScript interface;
+-   Document how `stickyFooter` pins footer rows inside a scrollable `tableOverflow` viewport; it defaults to `false`. This release adds types and documentation without changing runtime behavior;
+
+[Release notes](https://github.com/kekefreedog/kspreadsheet/releases/tag/v2.8.0)
 
 ### Custom 2.7.0
 

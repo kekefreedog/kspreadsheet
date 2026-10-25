@@ -90,6 +90,16 @@ describe('Separate cell and range selections', () => {
         expect(worksheet.getHighlighted()).to.deep.equal(ranges);
     });
 
+    it('enables separate ranges by default', () => {
+        const worksheet = jspreadsheet(root, { worksheets: [{ minDimensions: [8, 8] }] })[0];
+        expect(worksheet.options.multipleSelection).to.equal(true);
+        worksheet.setSelections([
+            [0, 0, 0, 0],
+            [3, 3, 3, 3],
+        ]);
+        expect(worksheet.getSelected(true)).to.deep.equal(['A1', 'D4']);
+    });
+
     it('rejects separate ranges when the option is disabled', () => {
         const worksheet = createWorksheet({ multipleSelection: false });
         worksheet.updateSelectionFromCoords(1, 1);

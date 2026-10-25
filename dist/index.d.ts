@@ -8,6 +8,21 @@ declare namespace jspreadsheet {
     /** Inclusive worksheet coordinates: left, top, right, bottom. */
     type SelectionRange = [number, number, number, number];
 
+    interface DownloadOptions {
+        /**
+         * Download filename, overriding csvFileName and worksheetName for this call only.
+         * The format extension is appended unless already present. Captured before generation starts.
+         */
+        filename?: string;
+
+        /**
+         * XLSX only: true exports the currently selected tab; false exports all tabs in order.
+         * When omitted, exports the worksheet on which download() was called (legacy behavior).
+         * CSV always exports the receiving worksheet.
+         */
+        onlyVisibleSheet?: boolean;
+    }
+
     type DropdownSourceItem =
         | string
         | number
@@ -1210,7 +1225,7 @@ declare namespace jspreadsheet {
          */
         selectionCopy?: boolean;
 
-        /** Enable Ctrl/Cmd-click and drag to select disconnected cells and ranges. @default false */
+        /** Enable Ctrl/Cmd-click and drag to select disconnected cells and ranges. @default true */
         multipleSelection?: boolean;
 
         /** Preserve blank gaps when copying disconnected ranges. False packs selected cells per row. @default true */
@@ -1589,9 +1604,10 @@ declare namespace jspreadsheet {
          * @param processed - If true, the result will contain the displayed cell values. Otherwise, the result will contain the actual cell values.
          * @param type - File format to download.
          * @default "csv"
-         * @returns A promise that resolves once the file has been generated and the download triggered (only meaningful for `type: 'xlsx'`, which may need to fetch remote images first; the CSV path resolves immediately).
+         * @param options - Per-download filename and XLSX worksheet selection.
+         * @returns A promise for XLSX that resolves once generation and download are triggered; void for CSV.
          */
-        download: (includeHeaders?: boolean, processed?: boolean, type?: 'csv' | 'xlsx') => Promise<void>;
+        download: (includeHeaders?: boolean, processed?: boolean, type?: 'csv' | 'xlsx', options?: DownloadOptions) => Promise<void> | void;
 
         /**
          * Stores information about the row or column being moved.

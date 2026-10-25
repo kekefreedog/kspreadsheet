@@ -3,6 +3,13 @@ const jspreadsheet = require('../dist/index.js');
 
 /** Exercise real input handlers, including their compatibility with the single-range API. */
 describe('Multiple selection interactions', () => {
+    // Document handlers are attached asynchronously by the factory, so register them before synchronous assertions
+    before(async () => {
+        jspreadsheet(root, { worksheets: [{ data: [['']] }] });
+        await new Promise((resolve) => setTimeout(resolve));
+        root.innerHTML = '';
+    });
+
     const makeSheet = (options = {}, spreadsheetOptions = {}) =>
         jspreadsheet(root, {
             ...spreadsheetOptions,

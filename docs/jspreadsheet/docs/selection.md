@@ -8,7 +8,7 @@ This section covers the technical aspects of handling spreadsheet selections in 
 
 ## Disconnected selections in kspreadsheet
 
-Set worksheet option `multipleSelection: true` to select separate cells and rectangles. It defaults to `false`. The worksheet keeps normalized, non-overlapping ranges and an active directional range. Cells between ranges are never implicitly selected.
+Worksheet option `multipleSelection` lets users select separate cells and rectangles. It defaults to `true`; set it to `false` for single-range selection. The worksheet keeps normalized, non-overlapping ranges and an active directional range. Cells between ranges are never implicitly selected.
 
 | Input | Behavior |
 | --- | --- |

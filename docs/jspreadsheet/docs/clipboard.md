@@ -6,7 +6,7 @@ description: Explore Jspreadsheet’s clipboard methods and events, enabling sea
 
 ## Disconnected selections in kspreadsheet
 
-Enable `multipleSelection` on the worksheet. `copyPreserveGaps` defaults to `true`; when copying separate ranges, unselected coordinates appear as blank fields in TSV output, preserving horizontal and vertical spacing. No unselected cell value is included.
+`multipleSelection` is enabled by default. `copyPreserveGaps` defaults to `true`; when copying separate ranges, unselected coordinates appear as blank fields in TSV output, preserving horizontal and vertical spacing. No unselected cell value is included.
 
 Setting `copyPreserveGaps: false` packs selected cells left within each selected row and omits unselected rows. Ragged rows are padded with blanks in external clipboard output.
 

@@ -91,16 +91,39 @@ const getRowHeightPx = function (obj, y) {
     return obj.options.defaultRowHeight || 20;
 };
 
-/**
- * Build the XLSX workbook buffer, embedding actual images for `image` type columns
- * (data:image cells are decoded directly, URL cells are fetched at export time). When a value
- * cannot be turned into an image (fetch failure, unsupported value...) the raw value is kept
- * as plain text instead. Exported (in addition to `download`) so it can be tested/reused
- * without touching the DOM (Blob/anchor/URL.createObjectURL).
- *
- * @return {Promise<ArrayBuffer>}
- */
-export const buildXlsxBuffer = async function (obj) {
+// Excel sheet names must be nonempty, unique (ignoring case), and at most 31 characters.
+const getXlsxSheetName = function (name, usedNames) {
+    let base =
+        String(name || 'Sheet1')
+            .replace(/[*?:/\\[\]]/g, '_')
+            .slice(0, 31)
+            .replace(/^'+|'+$/g, '') || 'Sheet1';
+    if (base.toLowerCase() === 'history') {
+        base = 'History_';
+    }
+    let result = base;
+    let index = 2;
+    while (usedNames.has(result.toLowerCase())) {
+        const suffix = ' (' + index++ + ')';
+        result = base.slice(0, 31 - suffix.length) + suffix;
+    }
+    usedNames.add(result.toLowerCase());
+    return result;
+};
+
+const getExportWorksheets = function (obj, options) {
+    const parent = obj.parent;
+    if (options.onlyVisibleSheet === false && parent.worksheets && parent.worksheets.length) {
+        return parent.worksheets.slice();
+    }
+    if (options.onlyVisibleSheet === true && typeof parent.getWorksheetActive === 'function') {
+        return [parent.worksheets[parent.getWorksheetActive()] || obj];
+    }
+    return [obj];
+};
+
+/** Populate one XLSX sheet, preserving image embedding and configured column widths. */
+const populateXlsxSheet = async function (obj, workbook, sheet) {
     // Get headers
     const headers = obj.getHeaders(true);
 
@@ -108,10 +131,6 @@ export const buildXlsxBuffer = async function (obj) {
 
     // Map values to rows using header indices
     const rows = values.map((row) => headers.map((_, colIndex) => row[colIndex.toString()] ?? ''));
-
-    // Create workbook & worksheet
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(obj.worksheetName ? obj.worksheetName : 'Sheet1');
 
     sheet.addRow(headers);
     for (const row of rows) {
@@ -162,6 +181,26 @@ export const buildXlsxBuffer = async function (obj) {
             }
         }
     }
+};
+
+/**
+ * Build an XLSX buffer. By default export the receiving worksheet; onlyVisibleSheet
+ * selects the active tab (true) or every tab in workbook order (false).
+ * Unavailable images remain raw text. Names and sheet selection are captured before awaits.
+ *
+ * @return {Promise<ArrayBuffer>}
+ */
+export const buildXlsxBuffer = async function (obj, options = {}) {
+    const workbook = new ExcelJS.Workbook();
+    const usedNames = new Set();
+    const worksheets = getExportWorksheets(obj, options).map((worksheet) => ({
+        worksheet,
+        sheet: workbook.addWorksheet(getXlsxSheetName(worksheet.options.worksheetName, usedNames)),
+    }));
+
+    for (const { worksheet, sheet } of worksheets) {
+        await populateXlsxSheet(worksheet, workbook, sheet);
+    }
 
     return workbook.xlsx.writeBuffer();
 };
@@ -169,13 +208,13 @@ export const buildXlsxBuffer = async function (obj) {
 /**
  * Build and trigger the browser download of the XLSX file.
  */
-const downloadXlsx = async function (obj) {
-    const buffer = await buildXlsxBuffer(obj);
+const downloadXlsx = async function (obj, filename, options) {
+    const buffer = await buildXlsxBuffer(obj, options);
     const blob = new Blob([buffer], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = (obj.options.csvFileName || obj.options.worksheetName || 'export') + '.xlsx';
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 };
@@ -185,7 +224,7 @@ const downloadXlsx = async function (obj) {
  *
  * @return Promise<void> for xlsx (image embedding may need to fetch remote URLs), void for csv
  */
-export const download = function (includeHeaders, processed, type = 'csv') {
+export const download = function (includeHeaders, processed, type = 'csv', options = {}) {
     const obj = this;
 
     if (obj.parent.config.allowExport == false) {
@@ -193,8 +232,13 @@ export const download = function (includeHeaders, processed, type = 'csv') {
         return;
     }
 
+    // Capture the filename before XLSX generation yields, even when callers restore options.
+    const extension = type === 'xlsx' ? '.xlsx' : '.csv';
+    const name = String(options.filename || obj.options.csvFileName || obj.options.worksheetName || 'export');
+    const filename = name.toLowerCase().endsWith(extension) ? name : name + extension;
+
     if (type === 'xlsx') {
-        return downloadXlsx(obj);
+        return downloadXlsx(obj, filename, options);
     } else {
         // Data
         let data = '';
@@ -207,14 +251,14 @@ export const download = function (includeHeaders, processed, type = 'csv') {
 
         // IE Compatibility
         if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-            window.navigator.msSaveOrOpenBlob(blob, (obj.options.csvFileName || obj.options.worksheetName || 'export') + '.csv');
+            window.navigator.msSaveOrOpenBlob(blob, filename);
         } else {
             // Download element
             const pom = document.createElement('a');
             pom.setAttribute('target', '_top');
             const url = URL.createObjectURL(blob);
             pom.href = url;
-            pom.setAttribute('download', (obj.options.csvFileName || obj.options.worksheetName || 'export') + '.csv');
+            pom.setAttribute('download', filename);
             document.body.appendChild(pom);
             pom.click();
             pom.parentNode.removeChild(pom);

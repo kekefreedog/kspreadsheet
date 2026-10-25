@@ -67,7 +67,7 @@ const setWorksheetFunctions = function (worksheet) {
 const createTable = function () {
     let obj = this;
 
-    obj.options.multipleSelection = obj.options.multipleSelection === true;
+    obj.options.multipleSelection = obj.options.multipleSelection !== false;
     obj.options.copyPreserveGaps = obj.options.copyPreserveGaps !== false;
     obj.selectedRanges = [];
 
