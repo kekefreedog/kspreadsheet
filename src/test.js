@@ -3,6 +3,7 @@ import { createMultiSelectionScenarios } from './manual/multiSelection.js';
 
 import './jspreadsheet.css';
 import 'jsuites/dist/jsuites.css';
+import './jspreadsheet.themes.css';
 
 window.jss = jspreadsheet;
 
@@ -939,6 +940,97 @@ const scenarios = [
         },
     },
 ];
+
+// Verify selections inside the same parent zoom used by consumer applications.
+scenarios.push({
+    name: 'Selection inside an 85% scaled parent',
+    check: 'Select, copy and fill ranges before and after scrolling. Outlines must follow the cell edges with the sticky totals visible.',
+    render() {
+        // Prepare the worksheet result.
+        let result;
+
+        // Create a scoped wrapper so other scenarios keep their original scale.
+        const wrapper = document.createElement('div');
+
+        // Apply the application's parent zoom.
+        wrapper.style.zoom = '0.85';
+
+        // Mount the scaled wrapper.
+        root.appendChild(wrapper);
+
+        // Build a scrollable worksheet with frozen cells and a sticky footer.
+        result = jspreadsheet(wrapper, {worksheets:[{
+            data: Array.from({length:60}, (_, y)=>Array.from({length:12}, (_, x)=>`${x}:${y}`)),
+            columns: Array.from({length:12}, ()=>({width:100})),
+            tableOverflow:true, tableWidth:'650px', tableHeight:'400px',
+            freezeColumns:1, freezeRows:1, stickyFooter:true, footers:[['Total']],
+        }]});
+
+        // Return the mounted worksheet instances.
+        return result;
+    },
+});
+
+// Verify frozen selection backgrounds with brightly colored scrolling cells.
+scenarios.push({
+    name: 'Opaque selected frozen cells',
+    check: 'Scroll right and select a name in either frozen column. No scrolling text or cyan/magenta booking colors should show through. Repeat with a range and the frozen top row.',
+    render() {
+
+        // Prepare the worksheet result
+        let result;
+
+        // Mount frozen names beside bright booking cells
+        result = jspreadsheet(root, { worksheets: [{
+            data: Array.from({ length: 30 }, (_, y) => Array.from({ length: 12 }, (_, x) => x < 2 ? `Person ${y + 1}` : `Booking ${x}`)),
+            columns: Array.from({ length: 12 }, () => ({ width: 120 })),
+            tableOverflow: true,
+            tableWidth: '650px',
+            tableHeight: '400px',
+            freezeColumns: 2,
+            freezeRows: 1,
+            defaultRowHeight: 40,
+            style: { D4: 'background-color: #00ffff;', E4: 'background-color: #ff00ff;' },
+        }] });
+
+        // Place bright booking cells beneath the frozen names
+        result[0].content.scrollLeft = 260;
+
+        // Select a frozen name to expose any translucent background
+        result[0].updateSelectionFromCoords(1, 3, 1, 3);
+
+        // Return the mounted worksheet instances
+        return result;
+
+    },
+});
+
+// Verify opt-in snapshot replacement without losing the visible worksheet view
+scenarios.push({
+    name: 'Preserve the view while adding data',
+    check: 'Resize a column, scroll down/right and select a cell. Add bookings: the visible person, selection, widths and zoom should remain stable.',
+    render: () => {
+
+        // Prepare result
+        const result = jspreadsheet(root, {worksheets: [{data: Array.from({length: 300}, (_, y) => [y, `Person ${y}`, 'Booking']), columns: [{width: 100}, {width: 240}, {width: 900}], minDimensions: [3, 0], lazyLoading: true, tableOverflow: true, tableHeight: '450px', tableWidth: '800px'}]});
+
+        // Create an explicit progressive-load action
+        const button = document.createElement('button');
+
+        // Describe the incoming batch
+        button.textContent = 'Add bookings';
+
+        // Replace rows while preserving identity-based view state
+        button.onclick = () => result[0].setData([[-Date.now(), 'New person', 'Booking'], ...result[0].options.data.map(row => row.slice())], {preserveState: true, rowKey: row => row[0]});
+
+        // Mount the manual action beside the worksheet
+        extra.append(button);
+
+        // Return result
+        return result;
+
+    },
+});
 
 scenarios.push(...createMultiSelectionScenarios(jspreadsheet, root, extra));
 

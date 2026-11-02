@@ -19,6 +19,8 @@ export const updateCornerPosition = function () {
         const last = obj.highlighted[obj.highlighted.length - 1].element;
 
         const contentRect = obj.content.getBoundingClientRect();
+        // Convert screen distances into this scroll container's CSS pixels.
+        const scale = getContentScale(obj, contentRect);
         const x1 = contentRect.left;
         const y1 = contentRect.top;
 
@@ -28,8 +30,8 @@ export const updateCornerPosition = function () {
         const w2 = lastRect.width;
         const h2 = lastRect.height;
 
-        let x = x2 - x1 - obj.content.clientLeft + obj.content.scrollLeft + w2 - 4;
-        let y = y2 - y1 - obj.content.clientTop + obj.content.scrollTop + h2 - 4;
+        let x = (x2 - x1 + w2) / scale.x - obj.content.clientLeft + obj.content.scrollLeft - 4;
+        let y = (y2 - y1 + h2) / scale.y - obj.content.clientTop + obj.content.scrollTop - 4;
 
         // Absolute children contribute to scroll extents. Keep the handle inside the table
         // at the last row/column so selecting a cell cannot introduce a scrollbar and move
@@ -40,8 +42,8 @@ export const updateCornerPosition = function () {
             const marginTop = parseFloat(obj.corner.style.marginTop) || 0;
             const cornerWidth = obj.corner.offsetWidth || 7;
             const cornerHeight = obj.corner.offsetHeight || 7;
-            x = Math.min(x, tableRect.right - x1 - obj.content.clientLeft + obj.content.scrollLeft - cornerWidth - marginLeft);
-            y = Math.min(y, tableRect.bottom - y1 - obj.content.clientTop + obj.content.scrollTop - cornerHeight - marginTop);
+            x = Math.min(x, (tableRect.right - x1) / scale.x - obj.content.clientLeft + obj.content.scrollLeft - cornerWidth - marginLeft);
+            y = Math.min(y, (tableRect.bottom - y1) / scale.y - obj.content.clientTop + obj.content.scrollTop - cornerHeight - marginTop);
         }
 
         // Place the corner in the correct place
@@ -53,12 +55,12 @@ export const updateCornerPosition = function () {
         let hiddenBehindFreeze = false;
 
         if (obj.options.freezeColumns && !last.classList.contains('jss_freezed')) {
-            const right = lastRect.right - x1 - obj.content.clientLeft + obj.content.scrollLeft;
+            const right = (lastRect.right - x1) / scale.x - obj.content.clientLeft + obj.content.scrollLeft;
             hiddenBehindFreeze = right <= getFrozenClipLeft(obj);
         }
 
         if (!hiddenBehindFreeze && obj.options.freezeRows && !last.classList.contains('jss_row_freezed')) {
-            const bottom = lastRect.bottom - y1 - obj.content.clientTop + obj.content.scrollTop;
+            const bottom = (lastRect.bottom - y1) / scale.y - obj.content.clientTop + obj.content.scrollTop;
             hiddenBehindFreeze = bottom <= getFrozenClipTop(obj);
         }
 
@@ -136,17 +138,34 @@ export const updateSelection = function (el1, el2, origin) {
 };
 
 /**
- * Convert a getBoundingClientRect() measurement to content-div coordinates.
- * Uses getBoundingClientRect() so it is always zoom-aware.
+ * Measure the scroll container's scale separately from the worksheet's own zoom.
+ * DOM rectangles include ancestor zoom/transforms; scroll offsets and CSS positions do not.
+ */
+const getContentScale = function (obj, rect) {
+    // Prepare the screen-to-layout scale, including a fallback for detached elements.
+    const result = {
+        x: obj.content.offsetWidth ? rect.width / obj.content.offsetWidth || 1 : 1,
+        y: obj.content.offsetHeight ? rect.height / obj.content.offsetHeight || 1 : 1,
+    };
+
+    // Return the container scale.
+    return result;
+};
+
+/**
+ * Convert screen rectangles into unscaled scroll-container coordinates.
+ * Retain the worksheet's own zoom while removing ancestor scaling.
  */
 const rectToContentCoords = function (obj, firstRect, lastRect) {
     const contentRect = obj.content.getBoundingClientRect();
+    // Convert screen distances into this scroll container's CSS pixels.
+    const scale = getContentScale(obj, contentRect);
     const scrollLeft = obj.content.scrollLeft;
     const scrollTop = obj.content.scrollTop;
-    const top = firstRect.top - contentRect.top - obj.content.clientTop + scrollTop;
-    const left = firstRect.left - contentRect.left - obj.content.clientLeft + scrollLeft;
-    const width = lastRect.right - firstRect.left;
-    const height = lastRect.bottom - firstRect.top;
+    const top = (firstRect.top - contentRect.top) / scale.y - obj.content.clientTop + scrollTop;
+    const left = (firstRect.left - contentRect.left) / scale.x - obj.content.clientLeft + scrollLeft;
+    const width = (lastRect.right - firstRect.left) / scale.x;
+    const height = (lastRect.bottom - firstRect.top) / scale.y;
     return { top, left, width, height };
 };
 
@@ -158,10 +177,12 @@ const rectToContentCoords = function (obj, firstRect, lastRect) {
 const getFrozenClipLeft = function (obj) {
     if (!obj.options.freezeColumns) return 0;
     const contentRect = obj.content.getBoundingClientRect();
+    // Convert screen distances into this scroll container's CSS pixels.
+    const scale = getContentScale(obj, contentRect);
     for (let x = Math.min(obj.options.freezeColumns, obj.headers.length) - 1; x >= 0; x--) {
         const header = obj.headers[x];
         if (getComputedStyle(header).display === 'none') continue;
-        return header.getBoundingClientRect().right - contentRect.left - obj.content.clientLeft + obj.content.scrollLeft;
+        return (header.getBoundingClientRect().right - contentRect.left) / scale.x - obj.content.clientLeft + obj.content.scrollLeft;
     }
     return 0;
 };
@@ -174,11 +195,13 @@ const getFrozenClipLeft = function (obj) {
 const getFrozenClipTop = function (obj) {
     if (!obj.options.freezeRows) return 0;
     const contentRect = obj.content.getBoundingClientRect();
+    // Convert screen distances into this scroll container's CSS pixels.
+    const scale = getContentScale(obj, contentRect);
     for (let y = Math.min(obj.options.freezeRows, obj.rows.length) - 1; y >= 0; y--) {
         const row = obj.rows[y].element;
         if (row.style.display === 'none') continue;
         const cell = Array.from(row.children).find((element) => element.classList.contains('jss_row_freezed') && getComputedStyle(element).display !== 'none');
-        if (cell) return cell.getBoundingClientRect().bottom - contentRect.top - obj.content.clientTop + obj.content.scrollTop;
+        if (cell) return (cell.getBoundingClientRect().bottom - contentRect.top) / scale.y - obj.content.clientTop + obj.content.scrollTop;
     }
     return 0;
 };
@@ -201,8 +224,10 @@ const getStickyFooterRect = function (obj) {
 const getStickyFooterClipBottom = function (obj) {
     if (obj.options.stickyFooter != true || !obj.tfoot || !obj.tfoot.children.length) return 0;
     const contentRect = obj.content.getBoundingClientRect();
+    // Convert screen distances into this scroll container's CSS pixels.
+    const scale = getContentScale(obj, contentRect);
     const footerRect = getStickyFooterRect(obj);
-    return footerRect.top - contentRect.top - obj.content.clientTop + obj.content.scrollTop;
+    return (footerRect.top - contentRect.top) / scale.y - obj.content.clientTop + obj.content.scrollTop;
 };
 
 const hideOverlay = function (overlay) {

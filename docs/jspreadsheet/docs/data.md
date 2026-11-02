@@ -761,3 +761,19 @@ export class AppComponent {
 > Perfect for business applications requiring Excel compatibility and enterprise data management.
 >
 > **[Explore Pro Data Features →](https://jspreadsheet.com/docs/import-and-export)** | **[Compare Editions →](https://jspreadsheet.com/docs/getting-started)** | **[View Pricing →](https://jspreadsheet.com/pricing)**
+
+
+### Preserve the current view while replacing data (fork option)
+
+```javascript
+worksheet.setData(nextRows, {
+    preserveState: true,
+    rowKey: row => row[0],
+});
+```
+
+The second argument is optional. `preserveState` defaults to `false`; existing calls retain their selection-reset behavior. With preservation enabled, the existing worksheet retains column widths, zoom, row heights, text search, selection, and its visible scroll anchor, including lazy-loading windows and frozen rows. Internal selection restoration does not emit selection events.
+
+Use a stable unique `rowKey` when rows can move or arrive before existing rows. The callback receives normalized cell arrays for both old and incoming data; object input is mapped through column names first. Without a key, preservation follows row coordinates. Deleted, missing, and duplicate identities are excluded from restoration. Disconnected selections remain disconnected when `multipleSelection` is enabled; otherwise the active surviving fragment is retained.
+
+Use this for snapshots with the same column meanings/order. It does not preserve undo history, open editors, or unsaved local edits: `setData` still replaces cell data and elements. Scroll offsets are naturally clamped when the result becomes smaller.

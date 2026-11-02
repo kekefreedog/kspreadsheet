@@ -1501,6 +1501,14 @@ declare namespace jspreadsheet {
         worksheets: WorksheetInstance[];
     }
 
+    /** Optional view preservation when replacing a worksheet snapshot. */
+    interface SetDataOptions {
+        /** Keep scroll/visible lazy rows, selection, column widths, row heights, zoom and search. Default false. */
+        preserveState?: boolean;
+        /** Stable unique row identity from normalized arrays (including object input); omit to follow row coordinates. Missing/duplicate keys are not restored. */
+        rowKey?: (row: CellValue[], index: number) => string | number | null | undefined;
+    }
+
     interface WorksheetInstance {
         ads: HTMLDivElement;
 
@@ -2189,7 +2197,7 @@ declare namespace jspreadsheet {
          * Set data.
          * @param data - New data. It can be an array of cell values or an array of objects whose values are cell values.
          */
-        setData: (data?: CellValue[][] | Record<string, CellValue>[]) => void;
+        setData: (data?: CellValue[][] | Record<string, CellValue>[], options?: SetDataOptions) => void;
 
         /**
          * Set a column title.

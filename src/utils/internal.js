@@ -114,171 +114,268 @@ const parseNumber = function (value, columnNumber) {
 /**
  * Parse formulas
  */
-export const executeFormula = function (expression, x, y) {
+export const executeFormula = function(expression, x, y){
+
+    // Prepare result
+    let result;
+
+    // Keep the worksheet context
     const obj = this;
 
+    // Cache referenced formula results
     const formulaResults = [];
+
+    // Track recursive references
     const formulaLoopProtection = [];
 
-    // Execute formula with loop protection
-    const execute = function (expression, x, y) {
-        // Parent column identification
+    // Resolve formulas with loop protection
+    const execute = function(expression, x, y){
+
+        // Prepare result
+        let result = '#ERROR';
+
+        // Identify the formula cell
         const parentId = getColumnNameFromId([x, y]);
 
-        // Code protection
-        if (formulaLoopProtection[parentId]) {
+        // Detect recursive references
+        if(formulaLoopProtection[parentId]){
+
+            // Report the reference loop
             console.error('Reference loop detected');
-            return '#ERROR';
-        }
 
-        formulaLoopProtection[parentId] = true;
+        }else{
 
-        // Convert range tokens (ex: A1:B2, but also open-ended ranges like B:B, B2:B, A1:C,
-        // which reach the last existing row on whichever side omits the row number)
-        const tokensUpdate = function (tokens) {
-            // Last existing row number (1-based), used to close open-ended ranges
-            const lastRow = obj.records.length || 1;
+            // Mark the current formula as visited
+            formulaLoopProtection[parentId] = true;
 
-            for (let index = 0; index < tokens.length; index++) {
-                const f = [];
-                const token = tokens[index].split(':');
-                const start = /[0-9]+$/.test(token[0]) ? token[0] : token[0] + '1';
-                const end = /[0-9]+$/.test(token[1]) ? token[1] : token[1] + lastRow;
-                const e1 = getIdFromColumnName(start, true);
-                const e2 = getIdFromColumnName(end, true);
+            // Expand closed and open-ended ranges to individual references
+            const tokensUpdate = function(tokens){
 
-                let x1, x2;
+                // Close open-ended ranges at the last existing row
+                const lastRow = obj.records.length || 1;
 
-                if (e1[0] <= e2[0]) {
-                    x1 = e1[0];
-                    x2 = e2[0];
-                } else {
-                    x1 = e2[0];
-                    x2 = e1[0];
-                }
+                // Expand each range
+                for(let index = 0; index < tokens.length; index++){
 
-                let y1, y2;
+                    // Collect the range's cell references
+                    const references = [];
 
-                if (e1[1] <= e2[1]) {
-                    y1 = e1[1];
-                    y2 = e2[1];
-                } else {
-                    y1 = e2[1];
-                    y2 = e1[1];
-                }
+                    // Separate the range endpoints
+                    const token = tokens[index].split(':');
 
-                for (let j = y1; j <= y2; j++) {
-                    for (let i = x1; i <= x2; i++) {
-                        f.push(getColumnNameFromId([i, j]));
-                    }
-                }
+                    // Resolve the first row
+                    const start = /[0-9]+$/.test(token[0]) ? token[0] : token[0] + '1';
 
-                expression = expression.replace(tokens[index], f.join(','));
-            }
-        };
+                    // Resolve the last row
+                    const end = /[0-9]+$/.test(token[1]) ? token[1] : token[1] + lastRow;
 
-        // Range with $ remove $
-        expression = expression.replace(/\$?([A-Z]+)\$?([0-9]+)/g, '$1$2');
+                    // Resolve the starting coordinates
+                    const e1 = getIdFromColumnName(start, true);
 
-        let tokens = expression.match(/(?<![A-Z0-9])[A-Z]+[0-9]*:[A-Z]+[0-9]*(?![A-Z0-9])/g);
-        if (tokens && tokens.length) {
-            tokensUpdate(tokens);
-        }
+                    // Resolve the ending coordinates
+                    const e2 = getIdFromColumnName(end, true);
 
-        // Get tokens
-        tokens = expression.match(/([A-Z]+[0-9]+)/g);
+                    // Normalize the first column
+                    const x1 = Math.min(e1[0], e2[0]);
 
-        // Direct self-reference protection
-        if (tokens && tokens.indexOf(parentId) > -1) {
-            console.error('Self Reference detected');
-            return '#ERROR';
-        } else {
-            // Expressions to be used in the parsing
-            const formulaExpressions = {};
+                    // Normalize the last column
+                    const x2 = Math.max(e1[0], e2[0]);
 
-            if (tokens) {
-                for (let i = 0; i < tokens.length; i++) {
-                    // Keep chain
-                    if (!obj.formula[tokens[i]]) {
-                        obj.formula[tokens[i]] = [];
-                    }
-                    // Is already in the register
-                    if (obj.formula[tokens[i]].indexOf(parentId) < 0) {
-                        obj.formula[tokens[i]].push(parentId);
-                    }
+                    // Normalize the first row
+                    const y1 = Math.min(e1[1], e2[1]);
 
-                    // Do not calculate again
-                    if (!Object.prototype.hasOwnProperty.call(formulaExpressions, tokens[i])) {
-                        // Coords
-                        const position = getIdFromColumnName(tokens[i], 1);
-                        // Get value
-                        let value;
+                    // Normalize the last row
+                    const y2 = Math.max(e1[1], e2[1]);
 
-                        if (typeof obj.options.data[position[1]] != 'undefined' && typeof obj.options.data[position[1]][position[0]] != 'undefined') {
-                            value = obj.options.data[position[1]][position[0]];
-                        } else {
-                            value = '';
+                    // Visit each row
+                    for(let j = y1; j <= y2; j++){
+
+                        // Visit each column
+                        for(let i = x1; i <= x2; i++){
+
+                            // Append the cell reference
+                            references.push(getColumnNameFromId([i, j]));
+
                         }
-                        // Get column data
-                        if (('' + value).substr(0, 1) == '=') {
-                            if (typeof formulaResults[tokens[i]] !== 'undefined') {
-                                value = formulaResults[tokens[i]];
-                            } else {
-                                value = execute(value, position[0], position[1]);
-                                formulaResults[tokens[i]] = value;
-                            }
-                        }
-                        // Type!
-                        if (('' + value).trim() == '') {
-                            // Null
-                            formulaExpressions[tokens[i]] = null;
-                        } else {
-                            if (value == Number(value) && obj.parent.config.autoCasting != false) {
-                                // Number
-                                formulaExpressions[tokens[i]] = Number(value);
-                            } else {
-                                // Trying any formatted number
-                                const number = parseNumber.call(obj, value, position[0]);
-                                if (obj.parent.config.autoCasting != false && number) {
-                                    formulaExpressions[tokens[i]] = number;
-                                } else {
-                                    formulaExpressions[tokens[i]] = '"' + value + '"';
+
+                    }
+
+                    // Substitute the expanded range
+                    expression = expression.replace(tokens[index], references.join(','));
+
+                }
+
+            };
+
+            // Normalize absolute cell references
+            expression = expression.replace(/\$?([A-Z]+)\$?([0-9]+)/g, '$1$2');
+
+            // Find closed and open-ended ranges
+            let tokens = expression.match(/(?<![A-Z0-9])[A-Z]+[0-9]*:[A-Z]+[0-9]*(?![A-Z0-9])/g);
+
+            // Expand the ranges before resolving their values
+            if(tokens && tokens.length)
+                // Substitute individual references
+                tokensUpdate(tokens);
+
+            // Find individual cell references
+            tokens = expression.match(/([A-Z]+[0-9]+)/g);
+
+            // Detect direct self references
+            if(tokens && tokens.indexOf(parentId) > -1){
+
+                // Report the self reference
+                console.error('Self Reference detected');
+
+            }else{
+
+                // Prepare values for the formula engine
+                const formulaExpressions = {};
+
+                // Resolve referenced cells
+                if(tokens){
+
+                    // Visit each reference
+                    for(let i = 0; i < tokens.length; i++){
+
+                        // Initialize the dependency chain
+                        if(!obj.formula[tokens[i]])
+                            // Store the dependent formula list
+                            obj.formula[tokens[i]] = [];
+
+                        // Register this formula as a dependent
+                        if(obj.formula[tokens[i]].indexOf(parentId) < 0)
+                            // Append the dependent cell
+                            obj.formula[tokens[i]].push(parentId);
+
+                        // Resolve each reference only once
+                        if(!Object.prototype.hasOwnProperty.call(formulaExpressions, tokens[i])){
+
+                            // Read the referenced coordinates
+                            const position = getIdFromColumnName(tokens[i], 1);
+
+                            // Default missing cells to empty text
+                            let value = '';
+
+                            // Check the referenced cell exists
+                            if(typeof obj.options.data[position[1]] != 'undefined' && typeof obj.options.data[position[1]][position[0]] != 'undefined')
+                                // Read the raw cell value
+                                value = obj.options.data[position[1]][position[0]];
+
+                            // Evaluate referenced formulas
+                            if(('' + value).substr(0, 1) == '='){
+
+                                // Reuse cached results
+                                if(typeof formulaResults[tokens[i]] !== 'undefined'){
+
+                                    // Read the cached result
+                                    value = formulaResults[tokens[i]];
+
+                                }else{
+
+                                    // Evaluate the referenced formula
+                                    value = execute(value, position[0], position[1]);
+
+                                    // Cache its result
+                                    formulaResults[tokens[i]] = value;
+
                                 }
+
                             }
+
+                            // Preserve empty cell semantics
+                            if(('' + value).trim() == ''){
+
+                                // Represent empty cells as null
+                                formulaExpressions[tokens[i]] = null;
+
+                            }else if(value == Number(value) && obj.parent.config.autoCasting != false){
+
+                                // Preserve numeric casting
+                                formulaExpressions[tokens[i]] = Number(value);
+
+                            }else{
+
+                                // Try the column's formatted number parser
+                                const number = parseNumber.call(obj, value, position[0]);
+
+                                // Preserve formatted number casting
+                                if(obj.parent.config.autoCasting != false && number){
+
+                                    // Store the parsed number
+                                    formulaExpressions[tokens[i]] = number;
+
+                                }else{
+
+                                    // Escape text and hide colons from the formula peer's range scanner
+                                    formulaExpressions[tokens[i]] = JSON.stringify(String(value)).replace(/:/g, "\\u003a");
+
+                                }
+
+                            }
+
                         }
+
                     }
+
                 }
+
+                // Allow the application to intercept formula evaluation
+                const ret = dispatch.call(obj, 'onbeforeformula', obj, expression, x, y);
+
+                // Preserve cancellation behavior
+                if(ret === false){
+
+                    // Return the expanded expression without evaluating it
+                    result = expression;
+
+                }else{
+
+                    // Apply an intercepted expression
+                    if(ret)
+                        // Replace the expression
+                        expression = ret;
+
+                    // Evaluate using the existing formula engine
+                    try{
+
+                        // Evaluate resolved references
+                        result = formula(expression.substr(1), formulaExpressions, x, y, obj);
+
+                        // Reject functions as cell values
+                        if(typeof result === 'function')
+                            // Report an invalid formula result
+                            result = '#ERROR';
+
+                    }catch(e){
+
+                        // Preserve the worksheet error marker
+                        result = '#ERROR';
+
+                        // Check whether formula diagnostics are enabled
+                        if(obj.parent.config.debugFormulas === true)
+                            // Log the failing expression and values
+                            console.log(expression.substr(1), formulaExpressions, e);
+
+                    }
+
+                }
+
             }
 
-            const ret = dispatch.call(obj, 'onbeforeformula', obj, expression, x, y);
-            if (ret === false) {
-                return expression;
-            } else if (ret) {
-                expression = ret;
-            }
-
-            // Convert formula to javascript
-            let res;
-
-            try {
-                res = formula(expression.substr(1), formulaExpressions, x, y, obj);
-
-                if (typeof res === 'function') {
-                    res = '#ERROR';
-                }
-            } catch (e) {
-                res = '#ERROR';
-
-                if (obj.parent.config.debugFormulas === true) {
-                    console.log(expression.substr(1), formulaExpressions, e);
-                }
-            }
-
-            return res;
         }
+
+        // Return result
+        return result;
+
     };
 
-    return execute(expression, x, y);
+    // Evaluate the requested formula
+    result = execute(expression, x, y);
+
+    // Return result
+    return result;
+
 };
 
 export const parseValue = function (i, j, value, cell) {

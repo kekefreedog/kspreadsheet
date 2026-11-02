@@ -33,7 +33,9 @@
 
 .jss_worksheet .jss_freezed.highlight,
 .jss_worksheet .jss_row_freezed.highlight {
-    background-color: var(--jss_selection, rgba(0, 0, 0, 0.05));
+    /* Frozen cells paint above scrolling data. Use the solid highlighted surface;
+       the translucent selection token belongs to overlays over regular cells. */
+    background-color: var(--jss_content_background_highlighted, #f3f3f3);
 }
 
 .jss_worksheet .jss_freezed.highlight-top,

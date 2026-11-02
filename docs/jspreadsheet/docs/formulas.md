@@ -25,6 +25,18 @@ Jspreadsheet supports Excel-like formulas compatible with popular spreadsheet ap
 >\
 > [More about Formula Pro](https://jspreadsheet.com/products/formulas){.button}
 
+## kspreadsheet text references and footer counts
+
+The fork supports open-ended ranges such as `E:E`. A planning footer can use
+`=IFERROR(COUNTA(E:E), 0)` to count occupied cells across all rows, including
+inserted rows. Several booking labels separated by line breaks in one cell count
+as one occupied cell.
+
+Referenced text is escaped before it reaches the formula engine. Line breaks,
+quotes, backslashes, and literal range-like text remain cell content instead of
+being interpreted as formula syntax. This fix applies to worksheet formulas and
+footer formulas.
+
 ## Documentation
 
 This section details the settings, methods, and events associated with spreadsheet calculations in Jspreadsheet. All formula names, including custom ones, should be capitalized for security and standardization.

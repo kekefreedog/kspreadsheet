@@ -179,6 +179,27 @@ Open [the complete manual test runner](http://localhost:8000/) for all existing 
 
 ## Jspreadsheet Changelog
 
+### Custom — Unreleased: preserve the view during data replacement
+
+`worksheet.setData(rows, { preserveState: true, rowKey: row => row[0] })` replaces a data snapshot without recreating the worksheet. It retains column widths, zoom, resized row heights, text search, selection and the visible scroll anchor, including a lazy-loading window beyond the first 100 rows. Provide a stable unique `rowKey` when rows can move; omit it to preserve row coordinates. Missing/deleted/duplicate identities are dropped from restoration. Disconnected selections follow surviving rows; with multiple selection disabled, only the active surviving fragment is retained. An empty replacement clears selection and clamps scrolling.
+
+The option is off by default. Columns must retain their meaning/order; this is a data refresh, not a schema replacement. Existing `setData` behavior still resets undo history and recreates cell elements; it does not preserve an open editor or unsaved edits. The rowKey callback receives normalized cell arrays for both old and incoming rows, including object input mapped through column names. Row keys must be available on both snapshots. View restoration does not emit intermediate selection events.
+
+### Custom — Unreleased: opaque frozen selections
+
+Selected frozen columns, rows, and corner cells use the solid `--jss_content_background_highlighted` surface (default `#f3f3f3`). Scrolled text and booking colors no longer show through these cells when the theme stylesheet is loaded. Regular selection overlays continue using `--jss_selection`, and explicit cell backgrounds remain unchanged.
+
+### Custom — Unreleased: text in formula references
+
+Formula references preserve multiline labels, quotes, backslashes, and literal range-like text. Footer formulas such as `=IFERROR(COUNTA(E:E), 0)` can count cells containing several booking labels without producing `#ERROR`.
+
+### Custom — Unreleased: selection inside scaled parents
+
+Selection and copy/fill outlines now convert viewport measurements into the scroll
+container's CSS coordinates. This fixes offsets inside ancestors using CSS `zoom`
+or scale transforms, including combinations with worksheet zoom, frozen cells,
+scrolling and sticky footers.
+
 ### Custom — Unreleased: download options
 
 -   Capture download filenames before asynchronous XLSX generation so restoring worksheet options does not rename pending downloads;

@@ -1,3 +1,15 @@
+/**
+ * Worksheet Data
+ *
+ * Read and replace worksheet data and cell values.
+ *
+ * @package    kzarshenas/kspreadsheet
+ * @author     kekefreedog <kevin.zarshenas@gmail.com>
+ * @copyright  2026 Kévin Zarshenas
+ */
+
+/** Dependencies */
+import { captureDataState, restoreDataState } from './dataState.js';
 import { createRow } from './rows.js';
 import { getNumberOfColumns, createCellHeader } from './columns.js';
 import { updateCell, updateFormulaChain, updateTable } from './internal.js';
@@ -9,142 +21,323 @@ import { setMerge } from './merges.js';
 import { getCoordsFromRange } from './helpers.js';
 import { getHighlighted, isSelected } from './selection.js';
 
-export const setData = function (data) {
+/**
+ * Replace worksheet data, optionally retaining the current view.
+ *
+ * @param {Array} data Incoming rows
+ * @param {Object} options Optional preserveState and rowKey settings
+ * @return {void}
+ */
+export const setData = function (data, options = {}) {
+
+    // Capture the receiving worksheet
     const obj = this;
 
-    obj._lastSelectionGesture = null;
-    if (obj.selectedCell && obj.highlightBorder) obj.resetSelection();
+    // Snapshot view state before changing data or removing mounted rows
+    const state = options?.preserveState === true ? captureDataState.call(obj, data || obj.options.data || [], options) : null;
 
-    // Update data
-    if (data) {
-        obj.options.data = data;
+    // Preserve the existing event policy through internal restoration
+    const ignoreEvents = obj.parent.ignoreEvents;
+
+    // Silence selection resets and restoration during an opted-in data replacement
+    if(state){
+
+        // Retain user row configuration under its remapped identity
+        obj.options.rows = state.rows;
+
+        // Avoid publishing intermediate selection changes
+        obj.parent.ignoreEvents = true;
+
     }
 
-    // Data
-    if (!obj.options.data) {
-        obj.options.data = [];
-    }
+    // Always restore event delivery even if a renderer rejects the new data
+    try{
 
-    // Prepare data
-    if (obj.options.data && obj.options.data[0]) {
-        if (!Array.isArray(obj.options.data[0])) {
-            data = [];
-            for (let j = 0; j < obj.options.data.length; j++) {
-                const row = [];
-                for (let i = 0; i < obj.options.columns.length; i++) {
-                    row[i] = obj.options.data[j][obj.options.columns[i].name];
-                }
-                data.push(row);
-            }
+        // Update replacement data and layout
+        obj._lastSelectionGesture = null;
 
+        // Check replacement state
+        if(obj.selectedCell && obj.highlightBorder){
+
+            // Clear stale selection references before replacing row elements
+            obj.resetSelection();
+
+        }
+
+        // Keep cell-creation callbacks active so new cells receive their render styling
+        obj.parent.ignoreEvents = ignoreEvents;
+
+        // Update data
+        if(data){
+
+            // Update replacement data and layout
             obj.options.data = data;
+
         }
-    }
 
-    // Adjust minimal dimensions
-    let j = 0;
-    let i = 0;
-    const size_i = (obj.options.columns && obj.options.columns.length) || 0;
-    const size_j = obj.options.data.length;
-    const min_i = obj.options.minDimensions[0];
-    const min_j = obj.options.minDimensions[1];
-    const max_i = min_i > size_i ? min_i : size_i;
-    const max_j = min_j > size_j ? min_j : size_j;
+        // Data
+        if(!obj.options.data){
 
-    for (j = 0; j < max_j; j++) {
-        for (i = 0; i < max_i; i++) {
-            if (obj.options.data[j] == undefined) {
-                obj.options.data[j] = [];
+            // Update replacement data and layout
+            obj.options.data = [];
+
+        }
+
+        // Prepare data
+        if(obj.options.data && obj.options.data[0]){
+
+            // Check replacement state
+            if(!Array.isArray(obj.options.data[0])){
+
+                // Update replacement data and layout
+                data = [];
+
+                // Visit replacement records
+                for(let j = 0; j < obj.options.data.length; j++){
+
+                    // Prepare replacement state
+                    const row = [];
+
+                    // Visit replacement records
+                    for(let i = 0; i < obj.options.columns.length; i++){
+
+                        // Update replacement data and layout
+                        row[i] = obj.options.data[j][obj.options.columns[i].name];
+
+                    }
+
+                    // Update replacement data and layout
+                    data.push(row);
+
+                }
+
+                // Update replacement data and layout
+                obj.options.data = data;
+
             }
 
-            if (obj.options.data[j][i] == undefined) {
-                obj.options.data[j][i] = '';
+        }
+
+        // Adjust minimal dimensions
+        let j = 0;
+
+        // Prepare replacement state
+        let i = 0;
+
+        // Prepare replacement state
+        const size_i = (obj.options.columns && obj.options.columns.length) || 0;
+
+        // Prepare replacement state
+        const size_j = obj.options.data.length;
+
+        // Prepare replacement state
+        const min_i = obj.options.minDimensions[0];
+
+        // Prepare replacement state
+        const min_j = obj.options.minDimensions[1];
+
+        // Prepare replacement state
+        const max_i = min_i > size_i ? min_i : size_i;
+
+        // Prepare replacement state
+        const max_j = min_j > size_j ? min_j : size_j;
+
+        // Visit replacement records
+        for(j = 0; j < max_j; j++){
+
+            // Visit replacement records
+            for(i = 0; i < max_i; i++){
+
+                // Check replacement state
+                if(obj.options.data[j] == undefined){
+
+                    // Update replacement data and layout
+                    obj.options.data[j] = [];
+
+                }
+
+                // Check replacement state
+                if(obj.options.data[j][i] == undefined){
+
+                    // Update replacement data and layout
+                    obj.options.data[j][i] = '';
+
+                }
+
             }
+
         }
-    }
 
-    // Reset containers
-    obj.rows = [];
-    obj.results = null;
-    obj.records = [];
-    obj.history = [];
+        // Reset containers
+        obj.rows = [];
 
-    // Reset internal controllers
-    obj.historyIndex = -1;
+        // Update replacement data and layout
+        obj.results = null;
 
-    // Reset data
-    obj.tbody.innerHTML = '';
+        // Update replacement data and layout
+        obj.records = [];
 
-    let startNumber;
-    let finalNumber;
+        // Update replacement data and layout
+        obj.history = [];
 
-    // Lazy loading
-    if (obj.options.lazyLoading == true) {
-        // Load only 100 records
-        startNumber = 0;
-        finalNumber = obj.options.data.length < 100 ? obj.options.data.length : 100;
+        // Reset internal controllers
+        obj.historyIndex = -1;
 
-        if (obj.options.pagination) {
-            obj.options.pagination = false;
-            console.error('Jspreadsheet: Pagination will be disable due the lazyLoading');
-        }
-    } else if (obj.options.pagination) {
-        // Pagination
-        if (!obj.pageNumber) {
-            obj.pageNumber = 0;
-        }
-        var quantityPerPage = obj.options.pagination;
-        startNumber = obj.options.pagination * obj.pageNumber;
-        finalNumber = obj.options.pagination * obj.pageNumber + obj.options.pagination;
+        // Reset data
+        obj.tbody.innerHTML = '';
 
-        if (obj.options.data.length < finalNumber) {
+        // Prepare replacement state
+        let startNumber;
+
+        // Prepare replacement state
+        let finalNumber;
+
+        // Lazy loading
+        if(obj.options.lazyLoading == true){
+
+            // Load only 100 records
+            startNumber = 0;
+
+            // Update replacement data and layout
+            finalNumber = obj.options.data.length < 100 ? obj.options.data.length : 100;
+
+            // Check replacement state
+            if(obj.options.pagination){
+
+                // Update replacement data and layout
+                obj.options.pagination = false;
+
+                // Update replacement data and layout
+                console.error('Jspreadsheet: Pagination will be disable due the lazyLoading');
+
+            }
+        }else if(obj.options.pagination){
+
+            // Pagination
+            if(!obj.pageNumber){
+
+                // Update replacement data and layout
+                obj.pageNumber = 0;
+
+            }
+
+            // Prepare replacement state
+            var quantityPerPage = obj.options.pagination;
+
+            // Update replacement data and layout
+            startNumber = obj.options.pagination * obj.pageNumber;
+
+            // Update replacement data and layout
+            finalNumber = obj.options.pagination * obj.pageNumber + obj.options.pagination;
+
+            // Check replacement state
+            if(obj.options.data.length < finalNumber){
+
+                // Update replacement data and layout
+                finalNumber = obj.options.data.length;
+
+            }
+        }else{
+
+            // Update replacement data and layout
+            startNumber = 0;
+
+            // Update replacement data and layout
             finalNumber = obj.options.data.length;
+
         }
-    } else {
-        startNumber = 0;
-        finalNumber = obj.options.data.length;
-    }
 
-    // Ensure headers/cols exist for every column the data requires. The header
-    // cells are built once at worksheet creation from the column count known at
-    // that time; if setData later supplies rows with more columns than there are
-    // headers, createCell would read an undefined obj.headers[i]. Extend them here.
-    const numberOfColumns = getNumberOfColumns.call(obj);
-    if (obj.headers.length < numberOfColumns) {
-        for (let i = obj.headers.length; i < numberOfColumns; i++) {
-            createCellHeader.call(obj, i);
-            obj.headerContainer.appendChild(obj.headers[i]);
-            obj.colgroupContainer.appendChild(obj.cols[i].colElement);
+        // Ensure headers/cols exist for every column the data requires. The header
+        // cells are built once at worksheet creation from the column count known at
+        // that time; if setData later supplies rows with more columns than there are
+        // headers, createCell would read an undefined obj.headers[i]. Extend them here.
+        const numberOfColumns = getNumberOfColumns.call(obj);
+
+        // Check replacement state
+        if(obj.headers.length < numberOfColumns){
+
+            // Visit replacement records
+            for(let i = obj.headers.length; i < numberOfColumns; i++){
+
+                // Update replacement data and layout
+                createCellHeader.call(obj, i);
+
+                // Update replacement data and layout
+                obj.headerContainer.appendChild(obj.headers[i]);
+
+                // Update replacement data and layout
+                obj.colgroupContainer.appendChild(obj.cols[i].colElement);
+
+            }
+
         }
-    }
 
-    // Append nodes to the HTML
-    for (j = 0; j < obj.options.data.length; j++) {
-        // Create row
-        const row = createRow.call(obj, j, obj.options.data[j]);
-        // Append line to the table
-        if (j >= startNumber && j < finalNumber) {
-            obj.tbody.appendChild(row.element);
+        // Append nodes to the HTML
+        for(j = 0; j < obj.options.data.length; j++){
+
+            // Create row
+            const row = createRow.call(obj, j, obj.options.data[j]);
+
+            // Append line to the table
+            if(j >= startNumber && j < finalNumber){
+
+                // Update replacement data and layout
+                obj.tbody.appendChild(row.element);
+
+            }
+
         }
-    }
 
-    if (obj.options.lazyLoading == true) {
-        // Do not create pagination with lazyloading activated
-    } else if (obj.options.pagination) {
-        updatePagination.call(obj);
-    }
+        // Check replacement state
+        if(obj.options.lazyLoading == true){
 
-    // Merge cells
-    if (obj.options.mergeCells) {
-        const keys = Object.keys(obj.options.mergeCells);
-        for (let i = 0; i < keys.length; i++) {
-            const num = obj.options.mergeCells[keys[i]];
-            setMerge.call(obj, keys[i], num[0], num[1], 1);
+            // Do not create pagination with lazyloading activated
+        } else if(obj.options.pagination){
+
+            // Update replacement data and layout
+            updatePagination.call(obj);
+
         }
-    }
 
-    // Updata table with custom configurations if applicable
-    updateTable.call(obj);
+        // Merge cells
+        if(obj.options.mergeCells){
+
+            // Prepare replacement state
+            const keys = Object.keys(obj.options.mergeCells);
+
+            // Visit replacement records
+            for(let i = 0; i < keys.length; i++){
+
+                // Prepare replacement state
+                const num = obj.options.mergeCells[keys[i]];
+
+                // Update replacement data and layout
+                setMerge.call(obj, keys[i], num[0], num[1], 1);
+
+            }
+
+        }
+
+        // Update the table with custom configurations if applicable
+        updateTable.call(obj);
+
+        // Restore the logical selection and visible lazy window after rebuilding
+        if(state){
+
+            // Suppress only the transient search and selection changes during restoration
+            obj.parent.ignoreEvents = true;
+
+            // Keep the mounted worksheet view stable across snapshots
+            restoreDataState.call(obj, state);
+
+        }
+
+    }finally{
+
+        // Restore the caller's original event delivery policy
+        obj.parent.ignoreEvents = ignoreEvents;
+
+    }
 };
 
 /**
